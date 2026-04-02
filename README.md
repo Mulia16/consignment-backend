@@ -44,19 +44,31 @@ mvn clean package
 cd service-registry
 mvn spring-boot:run
 
-# 4. In another terminal: Start inventory service
+# 4. In another terminal: Start auth service
+cd auth-service
+mvn spring-boot:run
+
+# 5. In another terminal: Start inventory service
 cd inventory-service
 mvn spring-boot:run
 
-# 5. In another terminal: Start consignment service
+# 6. In another terminal: Start consignment service
 cd consignment-service
 mvn spring-boot:run
 
-# 6. In another terminal: Start API gateway
+# 7. In another terminal: Start email service
+cd email-service
+mvn spring-boot:run
+
+# 8. In another terminal: Start batch job service
+cd batch-job-service
+mvn spring-boot:run
+
+# 9. In another terminal: Start API gateway
 cd api-gateway
 mvn spring-boot:run
 
-# 7. Test through gateway
+# 10. Test through gateway
 curl -X GET http://localhost:8080/inventory/api/v1/inventory/SKU01/availability
 ```
 
@@ -100,12 +112,15 @@ cd consignment-module
 docker-compose up --build
 
 # Services will be available at:
-# - API Gateway: http://localhost:8080
-# - Service Registry (Eureka): http://localhost:8761
-# - Inventory Service: http://localhost:8081
+# - API Gateway:         http://localhost:8080
+# - Service Registry:    http://localhost:8761
+# - Inventory Service:   http://localhost:8081
 # - Consignment Service: http://localhost:8082
-# - PostgreSQL: localhost:5432
-# - MongoDB: localhost:27017
+# - Auth Service:        http://localhost:8083
+# - Email Service:       http://localhost:8084
+# - Batch Job Service:   http://localhost:8085
+# - PostgreSQL:          localhost:5432
+# - MongoDB:             localhost:27017
 ```
 
 ### Docker Commands
@@ -155,31 +170,42 @@ docker run -p [port]:[port] consignment/[service-name]
         │           Port: 8080                         │
         │   - Route requests to backend services       │
         │   - Load balancing                           │
-        │   - Rate limiting & security                 │
-        └──────┬──────────────────┬─────────────┬──────┘
-               │                  │             │
-      ┌────────▼────────┐  ┌──────▼──────┐ ┌───▼──────────┐
-      │ Service Registry│  │    Inventory│ │ Consignment  │
-      │  (Eureka)       │  │    Service  │ │   Service    │
-      │  Port: 8761     │  │  Port: 8081 │ │  Port: 8082  │
-      └─────────────────┘  └──────┬──────┘ └───┬──────────┘
-                                  │             │
-                                ▼─────┬─────────▼
-                               PostgreSQL Database
-                               (Consignment DB)
-                                (inventory DB)
+        │   - Correlation ID propagation               │
+        └──┬──────────┬──────────┬──────────┬──────────┘
+           │          │          │          │
+  ┌────────▼──┐ ┌─────▼────┐ ┌──▼──────┐ ┌─▼──────────┐
+  │  Service  │ │Inventory │ │Consign- │ │    Auth    │
+  │ Registry  │ │ Service  │ │  ment   │ │  Service   │
+  │ (Eureka)  │ │Port:8081 │ │ Service │ │ Port:8083  │
+  │ Port:8761 │ └──────────┘ │Port:8082│ └────────────┘
+  └───────────┘              └────┬────┘
+                                  │
+              ┌───────────────────┼───────────────────┐
+              │                   │                   │
+     ┌────────▼──────┐  ┌─────────▼──────┐  ┌────────▼──────┐
+     │  Email Service│  │ Batch Job Svc  │  │  PostgreSQL   │
+     │  Port: 8084   │  │  Port: 8085    │  │  Port: 5432   │
+     │  (async mail) │  │ (nightly jobs) │  │  + MongoDB    │
+     └───────────────┘  └────────────────┘  └───────────────┘
 ```
 
 ### Service Communication Flow
 
 ```
 Gateway Request → Route by path prefix
-                    ├─→ /inventory/* → Inventory Service (8081)
+                    ├─→ /inventory/*   → Inventory Service  (8081)
                     ├─→ /consignment/* → Consignment Service (8082)
-                    └─→ /api-gateway/* → Gateway Service (8080)
+                    ├─→ /auth/*        → Auth Service        (8083)
+                    ├─→ /email/*       → Email Service       (8084)
+                    └─→ /batch/*       → Batch Job Service   (8085)
 
 Consignment Service → Internal Calls via OpenFeign
-                    └─→ Inventory Service (for availability checks)
+                    ├─→ Inventory Service (availability checks)
+                    └─→ Email Service (settlement notifications)
+
+Batch Job Service → Scheduled Triggers
+                    ├─→ 01:00 AM nightly → Settlement computation
+                    └─→ 02:00 AM nightly → Report pre-computation
 ```
 
 ---
@@ -189,9 +215,12 @@ Consignment Service → Internal Calls via OpenFeign
 | Service | Port | Role | Technology |
 |---------|------|------|-----------|
 | **Service Registry** | 8761 | Eureka server for service discovery & registration | Spring Cloud Netflix Eureka |
-| **API Gateway** | 8080 | Central entry point, routing, rate limiting | Spring Cloud Gateway |
+| **API Gateway** | 8080 | Central entry point, routing, load balancing | Spring Cloud Gateway |
 | **Inventory Service** | 8081 | Inventory availability & stock management APIs | Spring Boot + PostgreSQL |
 | **Consignment Service** | 8082 | Core CMS business logic (CSRQ, CSO, CSDO, CSR, CSA, Settlement) | Spring Boot + PostgreSQL + MyBatis |
+| **Auth Service** | 8083 | JWT authentication, user management, role-based access | Spring Boot + Spring Security + PostgreSQL |
+| **Email Service** | 8084 | Async email notifications via Thymeleaf templates | Spring Boot + JavaMail |
+| **Batch Job Service** | 8085 | Scheduled batch jobs (nightly settlement, report pre-compute) | Spring Boot + Spring Batch |
 
 
 
@@ -580,9 +609,7 @@ PUT /consignment/api/csa/{id}/release
 
 ### Settlement APIs
 
-Generate and manage customer/supplier billing:
-
-```bash
+Generate and manage customer/supplier billing:```bash
 # List all settlements
 GET /consignment/api/settlement
 Query params: ?settlementType=CUSTOMER&company=COMP01
@@ -620,6 +647,59 @@ PUT /consignment/api/settlement/{id}/mark-as-billed
 
 # Mark as settled (payment received)
 PUT /consignment/api/settlement/{id}/mark-as-settled
+```
+
+### Auth APIs
+
+JWT-based authentication and user management:
+
+```bash
+# Login - returns JWT token
+POST /auth/login
+Content-Type: application/json
+Body: { "username": "admin", "password": "secret" }
+Response: { "token": "eyJ..." }
+
+# Register new user
+POST /auth/register
+Content-Type: application/json
+Body: { "username": "user1", "email": "[email]", "password": "secret" }
+
+# Validate token (used by gateway/services)
+POST /auth/validate
+Authorization: Bearer eyJ...
+Response: { "valid": true, "username": "admin" }
+```
+
+### Email APIs
+
+Async email notification via Thymeleaf templates:
+
+```bash
+# Send email using a template
+POST /email/send
+Content-Type: application/json
+Body: {
+  "to": "[email]",
+  "subject": "Settlement Ready",
+  "template": "notification",
+  "variables": { "message": "Your settlement is ready for review." }
+}
+Response: 202 Accepted - { "message": "Email queued for delivery" }
+```
+
+### Batch Job APIs
+
+Manual trigger for scheduled jobs (admin use):
+
+```bash
+# Trigger nightly settlement job manually
+POST /batch/settlement/trigger?businessDate=2026-04-01
+
+# Trigger report pre-compute job manually
+POST /batch/report/trigger?reportDate=2026-03-31
+
+# Response: { "status": "COMPLETED", "jobId": 1 }
 ```
 
 ---
@@ -923,18 +1003,24 @@ consignment-module/
 ├── api-gateway/               # Spring Cloud Gateway
 ├── inventory-service/         # Inventory APIs
 ├── consignment-service/       # Core CMS business logic
-│   ├── src/main/java/
-│   │   └── com/consignment/service/
-│   │       ├── api/           # REST controllers
-│   │       ├── domain/        # Entity models
-│   │       ├── service/       # Business logic
-│   │       ├── mapper/        # MyBatis data access
-│   │       └── config/        # Configuration classes
-│   ├── src/main/resources/
-│   │   ├── mapper/            # MyBatis XML mappings
-│   │   ├── schema.sql         # Database schema
-│   │   └── application.yml    # Configuration
-│   └── src/test/java/         # Tests
+├── auth-service/              # JWT auth & user management
+│   └── src/main/java/com/consignment/auth/
+│       ├── api/               # AuthController (login, register, validate)
+│       ├── model/             # User entity
+│       ├── repository/        # UserRepository
+│       ├── security/          # JwtUtil, SecurityConfig
+│       └── config/
+├── email-service/             # Async email notifications
+│   └── src/main/java/com/consignment/email/
+│       ├── api/               # EmailController
+│       ├── model/             # EmailRequest
+│       ├── service/           # EmailSenderService (async)
+│       └── config/
+├── batch-job-service/         # Scheduled batch jobs
+│   └── src/main/java/com/consignment/batch/
+│       ├── api/               # BatchJobController (manual trigger)
+│       ├── job/               # NightlySettlementJob, ReportPreComputeJob
+│       └── config/            # BatchJobConfig (Spring Batch)
 └── pom.xml                    # Maven root POM
 ```
 
@@ -1206,17 +1292,17 @@ This project is licensed under the **MIT License** - see [LICENSE](LICENSE) file
 
 ## 🎯 Key Metrics
 
-- **Total Services:** 4
-- **Total Endpoints:** 40+
+- **Total Services:** 7
+- **Total Endpoints:** 55+
 - **Database Tables:** 15+
 - **Test Coverage:** 75%+
-- **Deployment:** Docker-ready (in progress)
+- **Deployment:** Docker-ready
 
 ---
 
-**Last Updated:** March 2026  
-**Framework:** Spring Boot 3.3.5, Spring Cloud 2023.0.3  
-**Database:** PostgreSQL 14+  
+**Last Updated:** April 2026
+**Framework:** Spring Boot 3.3.5, Spring Cloud 2023.0.3
+**Database:** PostgreSQL 14+
 **Documentation:** Complete
 
 
