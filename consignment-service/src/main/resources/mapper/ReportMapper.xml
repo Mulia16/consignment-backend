@@ -1,0 +1,250 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.consignment.service.persistence.mapper.ReportMapper">
+
+    <resultMap id="ReportRowMap" type="com.consignment.service.model.report.ReportRow">
+        <result property="docNo" column="doc_no"/>
+        <result property="documentType" column="document_type"/>
+        <result property="company" column="company"/>
+        <result property="store" column="store"/>
+        <result property="supplierCode" column="supplier_code"/>
+        <result property="supplierContract" column="supplier_contract"/>
+        <result property="customerCode" column="customer_code"/>
+        <result property="customerBranch" column="customer_branch"/>
+        <result property="itemCode" column="item_code"/>
+        <result property="qty" column="qty"/>
+        <result property="unitPrice" column="unit_price"/>
+        <result property="lineAmount" column="line_amount"/>
+        <result property="uom" column="uom"/>
+        <result property="status" column="status"/>
+        <result property="referenceNo" column="reference_no"/>
+        <result property="businessDate" column="business_date"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <resultMap id="StockSummaryRowMap" type="com.consignment.service.model.report.StockSummaryRow">
+        <result property="store" column="store"/>
+        <result property="supplierCode" column="supplier_code"/>
+        <result property="supplierContract" column="supplier_contract"/>
+        <result property="itemCode" column="sku"/>
+        <result property="purchaseQty" column="purchase_qty"/>
+        <result property="closingQty" column="closing_qty"/>
+        <result property="unbillQty" column="unbill_qty"/>
+    </resultMap>
+
+    <resultMap id="CustomerInventoryRowMap" type="com.consignment.service.model.report.CustomerInventoryRow">
+        <result property="issueFromStore" column="issue_from_store"/>
+        <result property="customerCode" column="customer_code"/>
+        <result property="branchCode" column="branch_code"/>
+        <result property="itemCode" column="sku"/>
+        <result property="qty" column="qty"/>
+    </resultMap>
+
+    <!-- R01: CSRQ -->
+    <select id="reportCsrq" resultMap="ReportRowMap">
+        SELECT h.doc_no, 'CSRQ' AS document_type, h.company, h.store,
+               h.supplier_code, h.supplier_contract,
+               NULL AS customer_code, NULL AS customer_branch,
+               d.item_code, d.request_qty AS qty, NULL AS unit_price, NULL AS line_amount,
+               d.request_uom AS uom, h.status, h.reference_no,
+               CAST(h.created_at AS DATE) AS business_date, h.created_at
+        FROM csrq_header h
+        JOIN csrq_detail d ON d.csrq_id = h.id
+        WHERE (#{company} IS NULL OR h.company = #{company})
+          AND (#{store} IS NULL OR h.store = #{store})
+          AND (#{supplierCode} IS NULL OR h.supplier_code = #{supplierCode})
+          AND (#{status} IS NULL OR h.status = #{status})
+          AND (#{fromDate} IS NULL OR CAST(h.created_at AS DATE) >= #{fromDate})
+          AND (#{toDate} IS NULL OR CAST(h.created_at AS DATE) &lt;= #{toDate})
+        ORDER BY h.created_at DESC
+    </select>
+
+    <!-- R02: CSRV -->
+    <select id="reportCsrv" resultMap="ReportRowMap">
+        SELECT h.doc_no, 'CSRV' AS document_type, h.company, h.receiving_store AS store,
+               h.supplier_code, h.supplier_contract,
+               NULL AS customer_code, NULL AS customer_branch,
+               d.item_code, d.receiving_qty AS qty, NULL AS unit_price, NULL AS line_amount,
+               NULL AS uom, h.status, h.reference_no,
+               CAST(h.created_at AS DATE) AS business_date, h.created_at
+        FROM csrv_header h
+        JOIN csrv_detail d ON d.csrv_id = h.id
+        WHERE (#{company} IS NULL OR h.company = #{company})
+          AND (#{store} IS NULL OR h.receiving_store = #{store})
+          AND (#{supplierCode} IS NULL OR h.supplier_code = #{supplierCode})
+          AND (#{status} IS NULL OR h.status = #{status})
+          AND (#{fromDate} IS NULL OR CAST(h.created_at AS DATE) >= #{fromDate})
+          AND (#{toDate} IS NULL OR CAST(h.created_at AS DATE) &lt;= #{toDate})
+        ORDER BY h.created_at DESC
+    </select>
+
+    <!-- R03: CSO -->
+    <select id="reportCso" resultMap="ReportRowMap">
+        SELECT h.doc_no, 'CSO' AS document_type, h.company, h.store,
+               h.supplier_code, h.supplier_contract,
+               h.customer_code, h.customer_branch,
+               d.item_code, d.qty, NULL AS unit_price, NULL AS line_amount,
+               d.uom, h.status, h.reference_no,
+               CAST(h.created_at AS DATE) AS business_date, h.created_at
+        FROM cso_header h
+        JOIN cso_detail d ON d.cso_id = h.id
+        WHERE (#{company} IS NULL OR h.company = #{company})
+          AND (#{store} IS NULL OR h.store = #{store})
+          AND (#{customerCode} IS NULL OR h.customer_code = #{customerCode})
+          AND (#{status} IS NULL OR h.status = #{status})
+          AND (#{fromDate} IS NULL OR CAST(h.created_at AS DATE) >= #{fromDate})
+          AND (#{toDate} IS NULL OR CAST(h.created_at AS DATE) &lt;= #{toDate})
+        ORDER BY h.created_at DESC
+    </select>
+
+    <!-- R04: CSDO -->
+    <select id="reportCsdo" resultMap="ReportRowMap">
+        SELECT h.doc_no, 'CSDO' AS document_type, h.company, h.store,
+               NULL AS supplier_code, NULL AS supplier_contract,
+               h.customer_code, h.customer_branch,
+               d.item_code, d.qty, NULL AS unit_price, NULL AS line_amount,
+               d.uom, h.status, NULL AS reference_no,
+               CAST(h.created_at AS DATE) AS business_date, h.created_at
+        FROM csdo_header h
+        JOIN csdo_detail d ON d.csdo_id = h.id
+        WHERE (#{company} IS NULL OR h.company = #{company})
+          AND (#{store} IS NULL OR h.store = #{store})
+          AND (#{customerCode} IS NULL OR h.customer_code = #{customerCode})
+          AND (#{status} IS NULL OR h.status = #{status})
+          AND (#{fromDate} IS NULL OR CAST(h.created_at AS DATE) >= #{fromDate})
+          AND (#{toDate} IS NULL OR CAST(h.created_at AS DATE) &lt;= #{toDate})
+        ORDER BY h.created_at DESC
+    </select>
+
+    <!-- R05: CSR -->
+    <select id="reportCsr" resultMap="ReportRowMap">
+        SELECT h.doc_no, 'CSR' AS document_type, h.company, h.store,
+               h.supplier_code, h.supplier_contract,
+               NULL AS customer_code, NULL AS customer_branch,
+               d.item_code, COALESCE(d.actual_qty, d.qty) AS qty,
+               NULL AS unit_price, NULL AS line_amount,
+               d.uom, h.status, h.reference_no,
+               CAST(h.created_at AS DATE) AS business_date, h.created_at
+        FROM csr_header h
+        JOIN csr_detail d ON d.csr_id = h.id
+        WHERE (#{company} IS NULL OR h.company = #{company})
+          AND (#{store} IS NULL OR h.store = #{store})
+          AND (#{supplierCode} IS NULL OR h.supplier_code = #{supplierCode})
+          AND (#{status} IS NULL OR h.status = #{status})
+          AND (#{fromDate} IS NULL OR CAST(h.created_at AS DATE) >= #{fromDate})
+          AND (#{toDate} IS NULL OR CAST(h.created_at AS DATE) &lt;= #{toDate})
+        ORDER BY h.created_at DESC
+    </select>
+
+    <!-- R06: CSA -->
+    <select id="reportCsa" resultMap="ReportRowMap">
+        SELECT h.doc_no, 'CSA' AS document_type, h.company, h.store,
+               h.supplier_code, h.supplier_contract,
+               NULL AS customer_code, NULL AS customer_branch,
+               d.item_code, d.qty, NULL AS unit_price, NULL AS line_amount,
+               d.uom, h.status, h.reference_no,
+               CAST(h.created_at AS DATE) AS business_date, h.created_at
+        FROM csa_header h
+        JOIN csa_detail d ON d.csa_id = h.id
+        WHERE (#{company} IS NULL OR h.company = #{company})
+          AND (#{store} IS NULL OR h.store = #{store})
+          AND (#{supplierCode} IS NULL OR h.supplier_code = #{supplierCode})
+          AND (#{status} IS NULL OR h.status = #{status})
+          AND (#{fromDate} IS NULL OR CAST(h.created_at AS DATE) >= #{fromDate})
+          AND (#{toDate} IS NULL OR CAST(h.created_at AS DATE) &lt;= #{toDate})
+        ORDER BY h.created_at DESC
+    </select>
+
+    <!-- R07: Settlement Summary -->
+    <select id="reportSettlementSummary" resultMap="ReportRowMap">
+        SELECT h.doc_no, 'SETTLEMENT' AS document_type, h.company, h.store,
+               h.supplier_code, h.supplier_contract,
+               h.customer_code, NULL AS customer_branch,
+               NULL AS item_code, NULL AS qty,
+               NULL AS unit_price, h.total_amount AS line_amount,
+               h.currency AS uom, h.status, h.reference_no,
+               CAST(h.created_at AS DATE) AS business_date, h.created_at
+        FROM settlement_request_header h
+        WHERE (#{company} IS NULL OR h.company = #{company})
+          AND (#{store} IS NULL OR h.store = #{store})
+          AND (#{settlementType} IS NULL OR h.settlement_type = #{settlementType})
+          AND (#{status} IS NULL OR h.status = #{status})
+          AND (#{fromDate} IS NULL OR CAST(h.created_at AS DATE) >= #{fromDate})
+          AND (#{toDate} IS NULL OR CAST(h.created_at AS DATE) &lt;= #{toDate})
+        ORDER BY h.created_at DESC
+    </select>
+
+    <!-- R08: Settlement Detail -->
+    <select id="reportSettlementDetail" resultMap="ReportRowMap">
+        SELECT h.doc_no, d.document_type, h.company, h.store,
+               h.supplier_code, h.supplier_contract,
+               h.customer_code, NULL AS customer_branch,
+               d.item_code, d.qty, d.unit_price, d.line_amount,
+               d.uom, h.status, d.document_no AS reference_no,
+               CAST(d.created_at AS DATE) AS business_date, d.created_at
+        FROM settlement_request_detail d
+        JOIN settlement_request_header h ON h.id = d.settlement_id
+        WHERE d.settlement_id = #{settlementId}
+        ORDER BY d.created_at ASC
+    </select>
+
+    <!-- R09: Supplier Book Value -->
+    <select id="reportSupplierBookValue" resultMap="StockSummaryRowMap">
+        SELECT b.store, b.supplier_code, b.supplier_contract, b.sku,
+               b.purchase_qty, b.closing_qty, b.unbill_qty
+        FROM supplier_book_value_inventory b
+        JOIN consignment_external_supplier s ON s.supplier_code = b.supplier_code
+            AND s.consignee_store = b.store
+        WHERE (#{company} IS NULL OR s.consignee_company = #{company})
+          AND (#{store} IS NULL OR b.store = #{store})
+          AND (#{supplierCode} IS NULL OR b.supplier_code = #{supplierCode})
+          AND (#{supplierContract} IS NULL OR b.supplier_contract = #{supplierContract})
+        ORDER BY b.store, b.supplier_code, b.sku
+    </select>
+
+    <!-- R10: Customer Consignment Inventory -->
+    <select id="reportCustomerInventory" resultMap="CustomerInventoryRowMap">
+        SELECT issue_from_store, customer_code, branch_code, sku, qty
+        FROM customer_consignment_inventory
+        WHERE (#{store} IS NULL OR issue_from_store = #{store})
+          AND (#{customerCode} IS NULL OR customer_code = #{customerCode})
+          AND qty != 0
+        ORDER BY issue_from_store, customer_code, sku
+    </select>
+
+    <!-- R11: Reservation Summary -->
+    <select id="reportReservation" resultMap="ReportRowMap">
+        SELECT r.doc_no, r.doc_type AS document_type,
+               NULL AS company, r.store,
+               NULL AS supplier_code, NULL AS supplier_contract,
+               NULL AS customer_code, NULL AS customer_branch,
+               r.sku AS item_code, r.qty,
+               NULL AS unit_price, NULL AS line_amount,
+               r.reservation_type AS uom, NULL AS status, NULL AS reference_no,
+               CAST(r.created_at AS DATE) AS business_date, r.created_at
+        FROM consignment_reservation r
+        WHERE (#{store} IS NULL OR r.store = #{store})
+          AND (#{itemCode} IS NULL OR r.sku = #{itemCode})
+        ORDER BY r.store, r.sku, r.created_at
+    </select>
+
+    <!-- R12: Consignment Setup -->
+    <select id="reportConsignmentSetup" resultMap="ReportRowMap">
+        SELECT s.item_code, 'SETUP' AS document_type,
+               s.consignee_company AS company, s.consignee_store AS store,
+               s.supplier_code, s.supplier_contract,
+               NULL AS customer_code, NULL AS customer_branch,
+               s.item_code AS item_code, NULL AS qty,
+               NULL AS unit_price, NULL AS line_amount,
+               s.supplier_type AS uom, NULL AS status, NULL AS reference_no,
+               NULL AS business_date, s.created_at,
+               NULL AS doc_no, NULL AS reference_no
+        FROM consignment_external_supplier s
+        WHERE (#{company} IS NULL OR s.consignee_company = #{company})
+          AND (#{store} IS NULL OR s.consignee_store = #{store})
+          AND (#{supplierCode} IS NULL OR s.supplier_code = #{supplierCode})
+        ORDER BY s.item_code, s.supplier_code
+    </select>
+
+</mapper>

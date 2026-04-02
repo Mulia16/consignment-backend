@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.consignment.service.persistence.mapper.CsrvMapper">
+
+    <resultMap id="CsrvHeaderResultMap" type="com.consignment.service.persistence.model.CsrvHeaderEntity">
+        <id property="id" column="id"/>
+        <result property="docNo" column="doc_no"/>
+        <result property="company" column="company"/>
+        <result property="receivingStore" column="receiving_store"/>
+        <result property="supplierCode" column="supplier_code"/>
+        <result property="supplierContract" column="supplier_contract"/>
+        <result property="branch" column="branch"/>
+        <result property="supplierDoNo" column="supplier_do_no"/>
+        <result property="deliveryDate" column="delivery_date"/>
+        <result property="remark" column="remark"/>
+        <result property="status" column="status"/>
+        <result property="createdBy" column="created_by"/>
+        <result property="createdMethod" column="created_method"/>
+        <result property="referenceNo" column="reference_no"/>
+        <result property="releasedAt" column="released_at"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <resultMap id="CsrvDetailResultMap" type="com.consignment.service.persistence.model.CsrvDetailEntity">
+        <id property="id" column="id"/>
+        <result property="csrvId" column="csrv_id"/>
+        <result property="itemCode" column="item_code"/>
+        <result property="availableQty" column="available_qty"/>
+        <result property="requestQty" column="request_qty"/>
+        <result property="receivingQty" column="receiving_qty"/>
+    </resultMap>
+
+    <insert id="insertHeader" parameterType="com.consignment.service.persistence.model.CsrvHeaderEntity">
+        INSERT INTO csrv_header (
+            id, doc_no, company, receiving_store, supplier_code, supplier_contract, branch, supplier_do_no,
+            delivery_date, remark, status, created_by, created_method, reference_no, released_at, created_at, updated_at
+        ) VALUES (
+            #{id}, #{docNo}, #{company}, #{receivingStore}, #{supplierCode}, #{supplierContract}, #{branch}, #{supplierDoNo},
+            #{deliveryDate}, #{remark}, #{status}, #{createdBy}, #{createdMethod}, #{referenceNo}, #{releasedAt}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+        )
+    </insert>
+
+    <insert id="insertDetail" parameterType="com.consignment.service.persistence.model.CsrvDetailEntity">
+        INSERT INTO csrv_detail (id, csrv_id, item_code, available_qty, request_qty, receiving_qty)
+        VALUES (#{id}, #{csrvId}, #{itemCode}, #{availableQty}, #{requestQty}, #{receivingQty})
+    </insert>
+
+    <select id="findHeaderById" resultMap="CsrvHeaderResultMap">
+        SELECT id, doc_no, company, receiving_store, supplier_code, supplier_contract, branch, supplier_do_no,
+               delivery_date, remark, status, created_by, created_method, reference_no, released_at, created_at, updated_at
+        FROM csrv_header
+        WHERE id = #{id}
+    </select>
+
+    <select id="searchHeaders" resultMap="CsrvHeaderResultMap">
+        SELECT DISTINCT h.id, h.doc_no, h.company, h.receiving_store, h.supplier_code, h.supplier_contract,
+               h.branch, h.supplier_do_no, h.delivery_date, h.remark, h.status, h.created_by, h.created_method,
+               h.reference_no, h.released_at, h.created_at, h.updated_at
+        FROM csrv_header h
+        LEFT JOIN csrv_detail d ON d.csrv_id = h.id
+        WHERE (#{company} IS NULL OR h.company = #{company})
+          AND (#{receivingStore} IS NULL OR h.receiving_store = #{receivingStore})
+          AND (#{supplierCode} IS NULL OR h.supplier_code = #{supplierCode})
+          AND (#{supplierContract} IS NULL OR h.supplier_contract = #{supplierContract})
+          AND (#{branch} IS NULL OR h.branch = #{branch})
+          AND (#{createdMethod} IS NULL OR h.created_method = #{createdMethod})
+          AND (#{referenceNo} IS NULL OR h.reference_no = #{referenceNo})
+          AND (#{itemCode} IS NULL OR d.item_code = #{itemCode})
+          AND (#{status} IS NULL OR h.status = #{status})
+        ORDER BY h.created_at DESC
+    </select>
+
+    <select id="findDetailsByHeaderId" resultMap="CsrvDetailResultMap">
+        SELECT id, csrv_id, item_code, available_qty, request_qty, receiving_qty
+        FROM csrv_detail
+        WHERE csrv_id = #{csrvId}
+        ORDER BY item_code ASC
+    </select>
+
+    <update id="updateHeaderStatus">
+        UPDATE csrv_header
+        SET status = #{status},
+            released_at = #{releasedAt},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
+    <select id="countMatchingSetup" resultType="long">
+        SELECT COUNT(*)
+        FROM consignment_external_supplier external_supplier
+        WHERE external_supplier.item_code = #{itemCode}
+          AND external_supplier.supplier_code = #{supplierCode}
+          AND external_supplier.supplier_contract = #{supplierContract}
+          AND external_supplier.consignee_store = #{receivingStore}
+    </select>
+</mapper>

@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.consignment.service.persistence.mapper.SettlementRequestMapper">
+
+    <resultMap id="SettlementRequestHeaderResultMap" type="com.consignment.service.persistence.model.SettlementRequestEntity">
+        <id property="id" column="id"/>
+        <result property="docNo" column="doc_no"/>
+        <result property="company" column="company"/>
+        <result property="store" column="store"/>
+        <result property="settlementType" column="settlement_type"/>
+        <result property="customerCode" column="customer_code"/>
+        <result property="supplierCode" column="supplier_code"/>
+        <result property="supplierContract" column="supplier_contract"/>
+        <result property="totalAmount" column="total_amount"/>
+        <result property="currency" column="currency"/>
+        <result property="status" column="status"/>
+        <result property="createdBy" column="created_by"/>
+        <result property="referenceNo" column="reference_no"/>
+        <result property="remark" column="remark"/>
+        <result property="readyForBillingAt" column="ready_for_billing_at"/>
+        <result property="billedAt" column="billed_at"/>
+        <result property="settledAt" column="settled_at"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <resultMap id="SettlementDetailResultMap" type="com.consignment.service.persistence.model.SettlementDetailEntity">
+        <id property="id" column="id"/>
+        <result property="settlementId" column="settlement_id"/>
+        <result property="documentType" column="document_type"/>
+        <result property="documentNo" column="document_no"/>
+        <result property="itemCode" column="item_code"/>
+        <result property="qty" column="qty"/>
+        <result property="uom" column="uom"/>
+        <result property="unitPrice" column="unit_price"/>
+        <result property="lineAmount" column="line_amount"/>
+        <result property="remark" column="remark"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <insert id="insertHeader" parameterType="com.consignment.service.persistence.model.SettlementRequestEntity">
+        INSERT INTO settlement_request_header (
+            id, doc_no, company, store, settlement_type, customer_code, supplier_code, supplier_contract,
+            total_amount, currency, status, created_by, reference_no, remark,
+            ready_for_billing_at, billed_at, settled_at, created_at, updated_at
+        ) VALUES (
+            #{id}, #{docNo}, #{company}, #{store}, #{settlementType}, #{customerCode}, #{supplierCode}, #{supplierContract},
+            #{totalAmount}, #{currency}, #{status}, #{createdBy}, #{referenceNo}, #{remark},
+            #{readyForBillingAt}, #{billedAt}, #{settledAt}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+        )
+    </insert>
+
+    <insert id="insertDetail" parameterType="com.consignment.service.persistence.model.SettlementDetailEntity">
+        INSERT INTO settlement_request_detail (
+            id, settlement_id, document_type, document_no, item_code, qty, uom, unit_price, line_amount, remark, created_at
+        ) VALUES (
+            #{id}, #{settlementId}, #{documentType}, #{documentNo}, #{itemCode}, #{qty}, #{uom}, #{unitPrice}, #{lineAmount}, #{remark}, CURRENT_TIMESTAMP
+        )
+    </insert>
+
+    <select id="findHeaderById" resultMap="SettlementRequestHeaderResultMap">
+        SELECT id, doc_no, company, store, settlement_type, customer_code, supplier_code, supplier_contract,
+               total_amount, currency, status, created_by, reference_no, remark,
+               ready_for_billing_at, billed_at, settled_at, created_at, updated_at
+        FROM settlement_request_header
+        WHERE id = #{id}
+    </select>
+
+    <select id="findAllHeaders" resultMap="SettlementRequestHeaderResultMap">
+        SELECT id, doc_no, company, store, settlement_type, customer_code, supplier_code, supplier_contract,
+               total_amount, currency, status, created_by, reference_no, remark,
+               ready_for_billing_at, billed_at, settled_at, created_at, updated_at
+        FROM settlement_request_header
+        ORDER BY created_at DESC
+    </select>
+
+    <select id="searchHeaders" resultMap="SettlementRequestHeaderResultMap">
+        SELECT id, doc_no, company, store, settlement_type, customer_code, supplier_code, supplier_contract,
+               total_amount, currency, status, created_by, reference_no, remark,
+               ready_for_billing_at, billed_at, settled_at, created_at, updated_at
+        FROM settlement_request_header
+        WHERE (#{company} IS NULL OR company = #{company})
+          AND (#{store} IS NULL OR store = #{store})
+          AND (#{settlementType} IS NULL OR settlement_type = #{settlementType})
+          AND (#{customerCode} IS NULL OR customer_code = #{customerCode})
+          AND (#{supplierCode} IS NULL OR supplier_code = #{supplierCode})
+          AND (#{status} IS NULL OR status = #{status})
+          AND (#{createdBy} IS NULL OR created_by = #{createdBy})
+        ORDER BY created_at DESC
+    </select>
+
+    <select id="findDetailsByHeaderId" resultMap="SettlementDetailResultMap">
+        SELECT id, settlement_id, document_type, document_no, item_code, qty, uom, unit_price, line_amount, remark, created_at
+        FROM settlement_request_detail
+        WHERE settlement_id = #{settlementId}
+        ORDER BY created_at ASC
+    </select>
+
+    <select id="countOpenByReference" resultType="int">
+        SELECT COUNT(1)
+        FROM settlement_request_header
+        WHERE company = #{company}
+          AND store = #{store}
+          AND settlement_type = #{settlementType}
+          AND reference_no = #{referenceNo}
+          AND status &lt;&gt; 'SETTLED'
+    </select>
+
+    <select id="countExistingDetail" resultType="int">
+        SELECT COUNT(1)
+        FROM settlement_request_detail
+        WHERE settlement_id = #{settlementId}
+          AND document_type = #{documentType}
+          AND document_no = #{documentNo}
+          AND item_code = #{itemCode}
+    </select>
+
+    <update id="updateTotalAmount">
+        UPDATE settlement_request_header
+        SET total_amount = #{totalAmount},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
+    <update id="updateHeaderStatus">
+        UPDATE settlement_request_header
+        SET status = #{status},
+            ready_for_billing_at = COALESCE(#{readyForBillingAt}, ready_for_billing_at),
+            billed_at = COALESCE(#{billedAt}, billed_at),
+            settled_at = COALESCE(#{settledAt}, settled_at),
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+</mapper>

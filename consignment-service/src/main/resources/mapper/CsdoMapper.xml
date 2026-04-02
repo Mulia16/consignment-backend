@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.consignment.service.persistence.mapper.CsdoMapper">
+
+    <resultMap id="CsdoHeaderResultMap" type="com.consignment.service.persistence.model.CsdoHeaderEntity">
+        <id property="id" column="id"/>
+        <result property="docNo" column="doc_no"/>
+        <result property="csoId" column="cso_id"/>
+        <result property="csoDocNo" column="cso_doc_no"/>
+        <result property="company" column="company"/>
+        <result property="store" column="store"/>
+        <result property="customerCode" column="customer_code"/>
+        <result property="customerBranch" column="customer_branch"/>
+        <result property="customerEmail" column="customer_email"/>
+        <result property="requireGenerateCdo" column="require_generate_cdo"/>
+        <result property="shippingMode" column="shipping_mode"/>
+        <result property="transporter" column="transporter"/>
+        <result property="status" column="status"/>
+        <result property="createdBy" column="created_by"/>
+        <result property="releasedAt" column="released_at"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <resultMap id="CsdoDetailResultMap" type="com.consignment.service.persistence.model.CsdoDetailEntity">
+        <id property="id" column="id"/>
+        <result property="csdoId" column="csdo_id"/>
+        <result property="itemCode" column="item_code"/>
+        <result property="qty" column="qty"/>
+        <result property="uom" column="uom"/>
+    </resultMap>
+
+    <insert id="insertHeader" parameterType="com.consignment.service.persistence.model.CsdoHeaderEntity">
+        INSERT INTO csdo_header (
+            id, doc_no, cso_id, cso_doc_no, company, store, customer_code, customer_branch, customer_email,
+            require_generate_cdo, shipping_mode, transporter, status, created_by, released_at, created_at, updated_at
+        ) VALUES (
+            #{id}, #{docNo}, #{csoId}, #{csoDocNo}, #{company}, #{store}, #{customerCode}, #{customerBranch}, #{customerEmail},
+            #{requireGenerateCdo}, #{shippingMode}, #{transporter}, #{status}, #{createdBy}, #{releasedAt}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+        )
+    </insert>
+
+    <insert id="insertDetail" parameterType="com.consignment.service.persistence.model.CsdoDetailEntity">
+        INSERT INTO csdo_detail (id, csdo_id, item_code, qty, uom)
+        VALUES (#{id}, #{csdoId}, #{itemCode}, #{qty}, #{uom})
+    </insert>
+
+    <select id="findHeaderById" resultMap="CsdoHeaderResultMap">
+        SELECT id, doc_no, cso_id, cso_doc_no, company, store, customer_code, customer_branch,
+               customer_email, require_generate_cdo, shipping_mode, transporter, status,
+               created_by, released_at, created_at, updated_at
+        FROM csdo_header
+        WHERE id = #{id}
+    </select>
+
+    <select id="findByCsoId" resultMap="CsdoHeaderResultMap">
+        SELECT id, doc_no, cso_id, cso_doc_no, company, store, customer_code, customer_branch,
+               customer_email, require_generate_cdo, shipping_mode, transporter, status,
+               created_by, released_at, created_at, updated_at
+        FROM csdo_header
+        WHERE cso_id = #{csoId}
+    </select>
+
+    <select id="findAllHeaders" resultMap="CsdoHeaderResultMap">
+        SELECT id, doc_no, cso_id, cso_doc_no, company, store, customer_code, customer_branch,
+               customer_email, require_generate_cdo, shipping_mode, transporter, status,
+               created_by, released_at, created_at, updated_at
+        FROM csdo_header
+        ORDER BY created_at DESC
+    </select>
+
+    <select id="searchHeaders" resultMap="CsdoHeaderResultMap">
+        SELECT DISTINCT h.id, h.doc_no, h.cso_id, h.cso_doc_no, h.company, h.store, h.customer_code, h.customer_branch,
+               h.customer_email, h.require_generate_cdo, h.shipping_mode, h.transporter, h.status,
+               h.created_by, h.released_at, h.created_at, h.updated_at
+        FROM csdo_header h
+        LEFT JOIN csdo_detail d ON d.csdo_id = h.id
+        WHERE (#{company} IS NULL OR h.company = #{company})
+          AND (#{store} IS NULL OR h.store = #{store})
+          AND (#{customerCode} IS NULL OR h.customer_code = #{customerCode})
+          AND (#{createdMethod} IS NULL OR h.doc_no LIKE CONCAT(#{createdMethod}, '%'))
+          AND (#{referenceNo} IS NULL OR h.cso_doc_no = #{referenceNo})
+          AND (#{itemCode} IS NULL OR d.item_code = #{itemCode})
+          AND (#{status} IS NULL OR h.status = #{status})
+        ORDER BY h.created_at DESC
+    </select>
+
+    <select id="findDetailsByHeaderId" resultMap="CsdoDetailResultMap">
+        SELECT id, csdo_id, item_code, qty, uom
+        FROM csdo_detail
+        WHERE csdo_id = #{csdoId}
+        ORDER BY item_code ASC
+    </select>
+
+    <update id="updateHeaderStatus">
+        UPDATE csdo_header
+        SET status = #{status},
+            released_at = #{releasedAt},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+</mapper>

@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.consignment.service.persistence.mapper.CsrqMapper">
+
+    <resultMap id="CsrqHeaderResultMap" type="com.consignment.service.persistence.model.CsrqHeaderEntity">
+        <id property="id" column="id"/>
+        <result property="docNo" column="doc_no"/>
+        <result property="company" column="company"/>
+        <result property="store" column="store"/>
+        <result property="supplierCode" column="supplier_code"/>
+        <result property="supplierContract" column="supplier_contract"/>
+        <result property="branch" column="branch"/>
+        <result property="internalSupplierStore" column="internal_supplier_store"/>
+        <result property="notes" column="notes"/>
+        <result property="status" column="status"/>
+        <result property="createdBy" column="created_by"/>
+        <result property="createdMethod" column="created_method"/>
+        <result property="referenceNo" column="reference_no"/>
+        <result property="releasedAt" column="released_at"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <resultMap id="CsrqDetailResultMap" type="com.consignment.service.persistence.model.CsrqDetailEntity">
+        <id property="id" column="id"/>
+        <result property="csrqId" column="csrq_id"/>
+        <result property="itemCode" column="item_code"/>
+        <result property="requestQty" column="request_qty"/>
+        <result property="requestUom" column="request_uom"/>
+    </resultMap>
+
+    <insert id="insertHeader" parameterType="com.consignment.service.persistence.model.CsrqHeaderEntity">
+        INSERT INTO csrq_header (
+            id, doc_no, company, store, supplier_code, supplier_contract, branch, internal_supplier_store,
+            notes, status, created_by, created_method, reference_no, released_at, created_at, updated_at
+        ) VALUES (
+            #{id}, #{docNo}, #{company}, #{store}, #{supplierCode}, #{supplierContract}, #{branch}, #{internalSupplierStore},
+            #{notes}, #{status}, #{createdBy}, #{createdMethod}, #{referenceNo}, #{releasedAt}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+        )
+    </insert>
+
+    <insert id="insertDetail" parameterType="com.consignment.service.persistence.model.CsrqDetailEntity">
+        INSERT INTO csrq_detail (id, csrq_id, item_code, request_qty, request_uom)
+        VALUES (#{id}, #{csrqId}, #{itemCode}, #{requestQty}, #{requestUom})
+    </insert>
+
+    <select id="findHeaderById" resultMap="CsrqHeaderResultMap">
+        SELECT id, doc_no, company, store, supplier_code, supplier_contract, branch, internal_supplier_store,
+               notes, status, created_by, created_method, reference_no, released_at, created_at, updated_at
+        FROM csrq_header
+        WHERE id = #{id}
+    </select>
+
+    <select id="searchHeaders" resultMap="CsrqHeaderResultMap">
+        SELECT DISTINCT h.id, h.doc_no, h.company, h.store, h.supplier_code, h.supplier_contract, h.branch,
+               h.internal_supplier_store, h.notes, h.status, h.created_by, h.created_method, h.reference_no,
+               h.released_at, h.created_at, h.updated_at
+        FROM csrq_header h
+        LEFT JOIN csrq_detail d ON d.csrq_id = h.id
+        WHERE (#{company} IS NULL OR h.company = #{company})
+          AND (#{store} IS NULL OR h.store = #{store})
+          AND (#{supplierCode} IS NULL OR h.supplier_code = #{supplierCode})
+          AND (#{supplierContract} IS NULL OR h.supplier_contract = #{supplierContract})
+          AND (#{branch} IS NULL OR h.branch = #{branch})
+          AND (#{internalSupplierStore} IS NULL OR h.internal_supplier_store = #{internalSupplierStore})
+          AND (#{createdMethod} IS NULL OR h.created_method = #{createdMethod})
+          AND (#{referenceNo} IS NULL OR h.reference_no = #{referenceNo})
+          AND (#{itemCode} IS NULL OR d.item_code = #{itemCode})
+          AND (#{status} IS NULL OR h.status = #{status})
+        ORDER BY h.created_at DESC
+    </select>
+
+    <select id="findDetailsByHeaderId" resultMap="CsrqDetailResultMap">
+        SELECT id, csrq_id, item_code, request_qty, request_uom
+        FROM csrq_detail
+        WHERE csrq_id = #{csrqId}
+        ORDER BY item_code ASC
+    </select>
+
+    <update id="updateHeaderStatus">
+        UPDATE csrq_header
+        SET status = #{status},
+            released_at = #{releasedAt},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteHeader">
+        DELETE FROM csrq_header
+        WHERE id = #{id}
+    </delete>
+
+    <select id="countMatchingSetup" resultType="long">
+        SELECT (
+            SELECT COUNT(*)
+            FROM consignment_external_supplier external_supplier
+            WHERE external_supplier.item_code = #{itemCode}
+              AND external_supplier.supplier_code = #{supplierCode}
+              AND external_supplier.supplier_contract = #{supplierContract}
+              AND external_supplier.consignee_store = #{store}
+        ) + (
+            SELECT COUNT(*)
+            FROM consignment_internal_supplier internal_supplier
+            WHERE internal_supplier.item_code = #{itemCode}
+              AND internal_supplier.supplier_code = #{supplierCode}
+              AND internal_supplier.supplier_store = #{internalSupplierStore}
+              AND internal_supplier.consignee_store = #{store}
+        )
+    </select>
+</mapper>

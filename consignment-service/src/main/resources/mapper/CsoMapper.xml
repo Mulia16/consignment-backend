@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.consignment.service.persistence.mapper.CsoMapper">
+
+    <resultMap id="CsoHeaderResultMap" type="com.consignment.service.persistence.model.CsoHeaderEntity">
+        <id property="id" column="id"/>
+        <result property="docNo" column="doc_no"/>
+        <result property="company" column="company"/>
+        <result property="store" column="store"/>
+        <result property="customerCode" column="customer_code"/>
+        <result property="customerBranch" column="customer_branch"/>
+        <result property="customerEmail" column="customer_email"/>
+        <result property="supplierCode" column="supplier_code"/>
+        <result property="supplierContract" column="supplier_contract"/>
+        <result property="autoGenerateCsdo" column="auto_generate_csdo"/>
+        <result property="note" column="note"/>
+        <result property="status" column="status"/>
+        <result property="createdBy" column="created_by"/>
+        <result property="createdMethod" column="created_method"/>
+        <result property="referenceNo" column="reference_no"/>
+        <result property="releasedAt" column="released_at"/>
+        <result property="releasedBy" column="released_by"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <resultMap id="CsoDetailResultMap" type="com.consignment.service.persistence.model.CsoDetailEntity">
+        <id property="id" column="id"/>
+        <result property="csoId" column="cso_id"/>
+        <result property="itemCode" column="item_code"/>
+        <result property="qty" column="qty"/>
+        <result property="uom" column="uom"/>
+    </resultMap>
+
+    <insert id="insertHeader" parameterType="com.consignment.service.persistence.model.CsoHeaderEntity">
+        INSERT INTO cso_header (
+            id, doc_no, company, store, customer_code, customer_branch, customer_email,
+            supplier_code, supplier_contract, auto_generate_csdo, note, status, created_by, created_method,
+            reference_no, released_at, released_by, created_at, updated_at
+        ) VALUES (
+            #{id}, #{docNo}, #{company}, #{store}, #{customerCode}, #{customerBranch}, #{customerEmail},
+            #{supplierCode}, #{supplierContract}, #{autoGenerateCsdo}, #{note}, #{status}, #{createdBy}, #{createdMethod},
+            #{referenceNo}, #{releasedAt}, #{releasedBy}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+        )
+    </insert>
+
+    <insert id="insertDetail" parameterType="com.consignment.service.persistence.model.CsoDetailEntity">
+        INSERT INTO cso_detail (id, cso_id, item_code, qty, uom)
+        VALUES (#{id}, #{csoId}, #{itemCode}, #{qty}, #{uom})
+    </insert>
+
+    <select id="findHeaderById" resultMap="CsoHeaderResultMap">
+        SELECT id, doc_no, company, store, customer_code, customer_branch, customer_email, supplier_code,
+               supplier_contract, auto_generate_csdo, note, status, created_by, created_method,
+               reference_no, released_at, released_by, created_at, updated_at
+        FROM cso_header
+        WHERE id = #{id}
+    </select>
+
+    <select id="searchHeaders" resultMap="CsoHeaderResultMap">
+        SELECT DISTINCT h.id, h.doc_no, h.company, h.store, h.customer_code, h.customer_branch, h.customer_email,
+               h.supplier_code, h.supplier_contract, h.auto_generate_csdo, h.note, h.status, h.created_by,
+               h.created_method, h.reference_no, h.released_at, h.released_by, h.created_at, h.updated_at
+        FROM cso_header h
+        LEFT JOIN cso_detail d ON d.cso_id = h.id
+        WHERE (#{company} IS NULL OR h.company = #{company})
+          AND (#{store} IS NULL OR h.store = #{store})
+          AND (#{customerCode} IS NULL OR h.customer_code = #{customerCode})
+          AND (#{supplierCode} IS NULL OR h.supplier_code = #{supplierCode})
+          AND (#{supplierContract} IS NULL OR h.supplier_contract = #{supplierContract})
+          AND (#{createdMethod} IS NULL OR h.created_method = #{createdMethod})
+          AND (#{referenceNo} IS NULL OR h.reference_no = #{referenceNo})
+          AND (#{itemCode} IS NULL OR d.item_code = #{itemCode})
+          AND (#{status} IS NULL OR h.status = #{status})
+        ORDER BY h.created_at DESC
+    </select>
+
+    <select id="findDetailsByHeaderId" resultMap="CsoDetailResultMap">
+        SELECT id, cso_id, item_code, qty, uom
+        FROM cso_detail
+        WHERE cso_id = #{csoId}
+        ORDER BY item_code ASC
+    </select>
+
+    <update id="updateHeaderStatus">
+        UPDATE cso_header
+        SET status = #{status},
+            released_at = #{releasedAt},
+            released_by = #{releasedBy},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteHeader">
+        DELETE FROM cso_header
+        WHERE id = #{id}
+    </delete>
+
+    <select id="countMatchingSetup" resultType="long">
+        SELECT COUNT(*)
+        FROM consignment_external_supplier external_supplier
+        WHERE external_supplier.item_code = #{itemCode}
+          AND external_supplier.supplier_code = #{supplierCode}
+          AND external_supplier.supplier_contract = #{supplierContract}
+          AND external_supplier.consignee_store = #{store}
+    </select>
+</mapper>

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.consignment.service.persistence.mapper.InventoryValidationMapper">
+
+    <select id="countBlockingInventory" resultType="long">
+        SELECT (
+            COALESCE((
+                SELECT COUNT(*)
+                FROM supplier_book_value_inventory
+                WHERE sku = #{itemCode}
+                  AND store = #{storeCode}
+                  AND (closing_qty &lt;&gt; 0 OR unbill_qty &lt;&gt; 0)
+            ), 0)
+            + COALESCE((
+                SELECT COUNT(*)
+                FROM customer_consignment_inventory
+                WHERE sku = #{itemCode}
+                  AND issue_from_store = #{storeCode}
+                  AND qty &lt;&gt; 0
+            ), 0)
+            + COALESCE((
+                SELECT COUNT(*)
+                FROM unpost_staging_inventory
+                WHERE sku = #{itemCode}
+                  AND location = #{storeCode}
+                  AND (sales_qty &lt;&gt; 0 OR return_qty &lt;&gt; 0)
+            ), 0)
+            + COALESCE((
+                SELECT COUNT(*)
+                FROM consignment_reservation
+                WHERE sku = #{itemCode}
+                  AND store = #{storeCode}
+                  AND qty &lt;&gt; 0
+            ), 0)
+        )
+    </select>
+</mapper>

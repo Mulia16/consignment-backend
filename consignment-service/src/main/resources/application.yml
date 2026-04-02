@@ -1,0 +1,100 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: consignment-service
+  profiles:
+    active: dev
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/consignment_db}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+  data:
+    mongodb:
+      uri: ${MONGODB_URI:mongodb://localhost:27017/consignment_logs}
+  sql:
+    init:
+      mode: always
+      continue-on-error: true
+
+spring.cloud.aws:
+  region:
+    static: ${AWS_REGION:ap-southeast-1}
+  credentials:
+    access-key: ${AWS_ACCESS_KEY_ID:local}
+    secret-key: ${AWS_SECRET_ACCESS_KEY:local}
+  sqs:
+    enabled: ${QUEUE_ENABLED:false}
+
+mybatis:
+  mapper-locations: classpath*:mapper/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+  type-aliases-package: com.consignment.service
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+app:
+  security:
+    enabled: ${SECURITY_ENABLED:false}
+  api-log:
+    enabled: ${API_LOG_ENABLED:false}
+  queue:
+    enabled: ${QUEUE_ENABLED:false}
+    master-sync: consignment-master-sync
+    pos-sales: consignment-pos-sales
+    csrv-auto: consignment-csrv-auto
+    cso-auto: consignment-cso-auto
+    adj-auto: consignment-adj-auto
+    available-stock: consignment-available-stock
+    settlement-docs: consignment-settlement-docs
+  settlement:
+    batch:
+      enabled: ${SETTLEMENT_BATCH_ENABLED:false}
+      timezone: ${SETTLEMENT_BATCH_TIMEZONE:UTC}
+      weekly-cron: ${SETTLEMENT_BATCH_WEEKLY_CRON:0 0 2 * * MON}
+      monthly-cron: ${SETTLEMENT_BATCH_MONTHLY_CRON:0 0 3 1 * *}
+      profiles: []
+
+---
+spring:
+  config:
+    activate:
+      on-profile: settlement-batch-template
+
+app:
+  settlement:
+    batch:
+      enabled: ${SETTLEMENT_BATCH_ENABLED:false}
+      timezone: ${SETTLEMENT_BATCH_TIMEZONE:Asia/Jakarta}
+      weekly-cron: ${SETTLEMENT_BATCH_WEEKLY_CRON:0 0 2 * * MON}
+      monthly-cron: ${SETTLEMENT_BATCH_MONTHLY_CRON:0 0 3 1 * *}
+      profiles:
+        - name: supplier-weekly-comp01-store01
+          company: COMP01
+          store: STORE01
+          settlementType: SUPPLIER
+          supplierCode: SUPP01
+          supplierContract: CONTRACT01
+          currency: IDR
+          createdBy: settlement-batch-job
+          defaultUnitPrice: 0
+        - name: customer-monthly-comp01-store01
+          company: COMP01
+          store: STORE01
+          settlementType: CUSTOMER
+          customerCode: CUST01
+          currency: IDR
+          createdBy: settlement-batch-job
+          defaultUnitPrice: 0

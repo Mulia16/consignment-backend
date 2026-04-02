@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.consignment.service.persistence.mapper.ItemPriceMapper">
+
+    <resultMap id="ItemPriceResultMap" type="com.consignment.service.persistence.model.ItemPriceEntity">
+        <id property="id" column="id"/>
+        <result property="itemCode" column="item_code"/>
+        <result property="company" column="company"/>
+        <result property="store" column="store"/>
+        <result property="supplierCode" column="supplier_code"/>
+        <result property="supplierContract" column="supplier_contract"/>
+        <result property="customerCode" column="customer_code"/>
+        <result property="unitPrice" column="unit_price"/>
+        <result property="currency" column="currency"/>
+        <result property="effectiveFrom" column="effective_from"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <insert id="upsert" parameterType="com.consignment.service.persistence.model.ItemPriceEntity">
+        INSERT INTO consignment_item_price (
+            id, item_code, company, store, supplier_code, supplier_contract, customer_code,
+            unit_price, currency, effective_from, created_at, updated_at
+        ) VALUES (
+            #{id}, #{itemCode}, #{company}, #{store}, #{supplierCode}, #{supplierContract}, #{customerCode},
+            #{unitPrice}, #{currency}, #{effectiveFrom}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+        )
+        ON CONFLICT (item_code, company, store, supplier_code, supplier_contract, customer_code, effective_from) DO UPDATE SET
+            unit_price = EXCLUDED.unit_price,
+            currency = EXCLUDED.currency,
+            updated_at = CURRENT_TIMESTAMP
+    </insert>
+
+    <select id="findEffectivePrice" resultMap="ItemPriceResultMap">
+        SELECT id, item_code, company, store, supplier_code, supplier_contract, customer_code,
+               unit_price, currency, effective_from, created_at, updated_at
+        FROM consignment_item_price
+        WHERE item_code = #{itemCode}
+          AND effective_from &lt;= CURRENT_DATE
+                    AND (company = '' OR company = #{company})
+                    AND (store = '' OR store = #{store})
+                    AND (supplier_code = '' OR supplier_code = #{supplierCode})
+                    AND (supplier_contract = '' OR supplier_contract = #{supplierContract})
+                    AND (customer_code = '' OR customer_code = #{customerCode})
+        ORDER BY
+                        CASE WHEN company = '' THEN 0 ELSE 1 END DESC,
+                        CASE WHEN store = '' THEN 0 ELSE 1 END DESC,
+                        CASE WHEN supplier_code = '' THEN 0 ELSE 1 END DESC,
+                        CASE WHEN supplier_contract = '' THEN 0 ELSE 1 END DESC,
+                        CASE WHEN customer_code = '' THEN 0 ELSE 1 END DESC,
+            effective_from DESC,
+            updated_at DESC
+        LIMIT 1
+    </select>
+</mapper>

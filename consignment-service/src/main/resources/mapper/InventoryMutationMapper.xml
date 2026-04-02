@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.consignment.service.persistence.mapper.InventoryMutationMapper">
+
+    <insert id="upsertCustomerInventory">
+        INSERT INTO customer_consignment_inventory (
+            issue_from_store, customer_code, branch_code, sku, qty, created_at, updated_at
+        ) VALUES (
+            #{issueFromStore}, #{customerCode}, #{branchCode}, #{sku}, #{qtyDelta}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+        )
+        ON CONFLICT (issue_from_store, customer_code, branch_code, sku) DO UPDATE SET
+            qty = customer_consignment_inventory.qty + EXCLUDED.qty,
+            updated_at = CURRENT_TIMESTAMP
+    </insert>
+
+    <insert id="adjustSupplierClosing">
+        INSERT INTO supplier_book_value_inventory (
+            store, sku, supplier_code, supplier_contract, purchase_qty, closing_qty, unbill_qty, period_date, created_at, updated_at
+        ) VALUES (
+            #{store}, #{sku}, #{supplierCode}, #{supplierContract}, 0, #{qtyDelta}, 0, CURRENT_DATE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+        )
+        ON CONFLICT (store, sku, supplier_code, supplier_contract) DO UPDATE SET
+            closing_qty = supplier_book_value_inventory.closing_qty + EXCLUDED.closing_qty,
+            updated_at = CURRENT_TIMESTAMP,
+            period_date = CURRENT_DATE
+    </insert>
+
+    <insert id="upsertUnpost">
+        INSERT INTO unpost_staging_inventory (
+            sku, location, sales_qty, return_qty, created_at, updated_at
+        ) VALUES (
+            #{sku}, #{location}, #{salesDelta}, #{returnDelta}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+        )
+        ON CONFLICT (sku, location) DO UPDATE SET
+            sales_qty = unpost_staging_inventory.sales_qty + EXCLUDED.sales_qty,
+            return_qty = unpost_staging_inventory.return_qty + EXCLUDED.return_qty,
+            updated_at = CURRENT_TIMESTAMP
+    </insert>
+</mapper>

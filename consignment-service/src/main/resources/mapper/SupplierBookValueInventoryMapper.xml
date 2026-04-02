@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.consignment.service.persistence.mapper.SupplierBookValueInventoryMapper">
+
+    <insert id="upsertReceiving">
+        INSERT INTO supplier_book_value_inventory (
+            store, sku, supplier_code, supplier_contract, purchase_qty, closing_qty, unbill_qty, period_date, created_at, updated_at
+        ) VALUES (
+            #{store}, #{sku}, #{supplierCode}, #{supplierContract}, #{receivingQty}, #{receivingQty}, 0, CURRENT_DATE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+        )
+        ON CONFLICT (store, sku, supplier_code, supplier_contract) DO UPDATE SET
+            purchase_qty = supplier_book_value_inventory.purchase_qty + EXCLUDED.purchase_qty,
+            closing_qty = supplier_book_value_inventory.closing_qty + EXCLUDED.closing_qty,
+            updated_at = CURRENT_TIMESTAMP,
+            period_date = CURRENT_DATE
+    </insert>
+</mapper>

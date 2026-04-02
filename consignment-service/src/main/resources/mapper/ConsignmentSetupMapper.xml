@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.consignment.service.persistence.mapper.ConsignmentSetupMapper">
+
+    <resultMap id="ExternalSupplierResultMap" type="com.consignment.service.persistence.model.ExternalSupplierEntity">
+        <id property="id" column="id"/>
+        <result property="itemCode" column="item_code"/>
+        <result property="supplierCode" column="supplier_code"/>
+        <result property="supplierType" column="supplier_type"/>
+        <result property="supplierContract" column="supplier_contract"/>
+        <result property="consigneeCompany" column="consignee_company"/>
+        <result property="consigneeStore" column="consignee_store"/>
+        <result property="currentInventoryQty" column="current_inventory_qty"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <resultMap id="InternalSupplierResultMap" type="com.consignment.service.persistence.model.InternalSupplierEntity">
+        <id property="id" column="id"/>
+        <result property="itemCode" column="item_code"/>
+        <result property="supplierCode" column="supplier_code"/>
+        <result property="supplierStore" column="supplier_store"/>
+        <result property="consigneeCompany" column="consignee_company"/>
+        <result property="consigneeStore" column="consignee_store"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <select id="findItemCodesWithSetup" resultType="string">
+        SELECT item_code FROM consignment_external_supplier
+        UNION
+        SELECT item_code FROM consignment_internal_supplier
+        ORDER BY item_code
+    </select>
+
+    <select id="findExternalByItemCode" resultMap="ExternalSupplierResultMap">
+        SELECT id, item_code, supplier_code, supplier_type, supplier_contract, consignee_company,
+               consignee_store, current_inventory_qty, created_at, updated_at
+        FROM consignment_external_supplier
+        WHERE item_code = #{itemCode}
+        ORDER BY created_at ASC
+    </select>
+
+    <select id="findInternalByItemCode" resultMap="InternalSupplierResultMap">
+        SELECT id, item_code, supplier_code, supplier_store, consignee_company, consignee_store, created_at
+        FROM consignment_internal_supplier
+        WHERE item_code = #{itemCode}
+        ORDER BY created_at ASC
+    </select>
+
+    <select id="findExternalById" resultMap="ExternalSupplierResultMap">
+        SELECT id, item_code, supplier_code, supplier_type, supplier_contract, consignee_company,
+               consignee_store, current_inventory_qty, created_at, updated_at
+        FROM consignment_external_supplier
+        WHERE item_code = #{itemCode}
+          AND id = #{id}
+    </select>
+
+    <insert id="insertExternal" parameterType="com.consignment.service.persistence.model.ExternalSupplierEntity">
+        INSERT INTO consignment_external_supplier (
+            id, item_code, supplier_code, supplier_type, supplier_contract, consignee_company,
+            consignee_store, current_inventory_qty, created_at, updated_at
+        ) VALUES (
+            #{id}, #{itemCode}, #{supplierCode}, #{supplierType}, #{supplierContract}, #{consigneeCompany},
+            #{consigneeStore}, #{currentInventoryQty}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+        )
+    </insert>
+
+    <update id="updateExternal" parameterType="com.consignment.service.persistence.model.ExternalSupplierEntity">
+        UPDATE consignment_external_supplier
+        SET supplier_code = #{supplierCode},
+            supplier_type = #{supplierType},
+            supplier_contract = #{supplierContract},
+            consignee_company = #{consigneeCompany},
+            consignee_store = #{consigneeStore},
+            current_inventory_qty = #{currentInventoryQty},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE item_code = #{itemCode}
+          AND id = #{id}
+    </update>
+
+    <delete id="deleteExternal">
+        DELETE FROM consignment_external_supplier
+        WHERE item_code = #{itemCode}
+          AND id = #{id}
+    </delete>
+
+    <insert id="insertInternal" parameterType="com.consignment.service.persistence.model.InternalSupplierEntity">
+        INSERT INTO consignment_internal_supplier (
+            id, item_code, supplier_code, supplier_store, consignee_company, consignee_store, created_at
+        ) VALUES (
+            #{id}, #{itemCode}, #{supplierCode}, #{supplierStore}, #{consigneeCompany}, #{consigneeStore}, CURRENT_TIMESTAMP
+        )
+    </insert>
+</mapper>

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.consignment.service.persistence.mapper.ItemSetupMapper">
+
+    <resultMap id="ItemSetupResultMap" type="com.consignment.service.persistence.model.ItemSetupEntity">
+        <id property="id" column="id"/>
+        <result property="itemCode" column="item_code"/>
+        <result property="hierarchy" column="hierarchy"/>
+        <result property="itemModel" column="item_model"/>
+        <result property="syncFlag" column="sync_flag"/>
+        <result property="deletedFlag" column="deleted_flag"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <select id="findByItemCode" resultMap="ItemSetupResultMap">
+        SELECT id, item_code, hierarchy, item_model, sync_flag, deleted_flag, created_at, updated_at
+        FROM consignment_item_setup
+        WHERE item_code = #{itemCode}
+          AND deleted_flag = FALSE
+    </select>
+
+    <insert id="upsert" parameterType="com.consignment.service.persistence.model.ItemSetupEntity">
+        INSERT INTO consignment_item_setup (
+            item_code, hierarchy, item_model, sync_flag, deleted_flag, created_at, updated_at
+        ) VALUES (
+            #{itemCode}, #{hierarchy}, #{itemModel}, #{syncFlag}, #{deletedFlag}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+        )
+        ON CONFLICT (item_code) DO UPDATE SET
+            hierarchy = EXCLUDED.hierarchy,
+            item_model = EXCLUDED.item_model,
+            sync_flag = EXCLUDED.sync_flag,
+            deleted_flag = EXCLUDED.deleted_flag,
+            updated_at = CURRENT_TIMESTAMP
+    </insert>
+
+    <insert id="ensureExists">
+        INSERT INTO consignment_item_setup (
+            item_code, hierarchy, item_model, sync_flag, deleted_flag, created_at, updated_at
+        ) VALUES (
+            #{itemCode}, #{hierarchy}, NULL, TRUE, FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+        )
+        ON CONFLICT (item_code) DO NOTHING
+    </insert>
+</mapper>
