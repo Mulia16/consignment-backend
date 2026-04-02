@@ -84,6 +84,62 @@ Content-Type: application/json
 
 ---
 
+## 🐳 Docker Deployment
+
+### Prerequisites for Docker
+- Docker Engine 20.10+
+- Docker Compose 2.0+
+
+### Quick Start with Docker
+
+```bash
+# 1. Clone and navigate
+cd consignment-module
+
+# 2. Build and start all services with Docker Compose
+docker-compose up --build
+
+# Services will be available at:
+# - API Gateway: http://localhost:8080
+# - Service Registry (Eureka): http://localhost:8761
+# - Inventory Service: http://localhost:8081
+# - Consignment Service: http://localhost:8082
+# - PostgreSQL: localhost:5432
+# - MongoDB: localhost:27017
+```
+
+### Docker Commands
+
+```bash
+# Start services in background
+docker-compose up -d
+
+# View logs
+docker-compose logs -f [service-name]
+
+# Stop services
+docker-compose down
+
+# Rebuild specific service
+docker-compose up --build [service-name]
+
+# Clean up volumes (WARNING: deletes data)
+docker-compose down -v
+```
+
+### Individual Service Builds
+
+```bash
+# Build specific service
+cd [service-name]
+docker build -t consignment/[service-name] .
+
+# Run specific service
+docker run -p [port]:[port] consignment/[service-name]
+```
+
+---
+
 ## 🏗️ System Architecture
 
 ### Microservices Topology

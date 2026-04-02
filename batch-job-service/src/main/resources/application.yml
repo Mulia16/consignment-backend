@@ -1,0 +1,35 @@
+server:
+  port: 8085
+
+spring:
+  application:
+    name: batch-job-service
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/consignment_db}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+  jpa:
+    hibernate:
+      ddl-auto: update
+  batch:
+    job:
+      enabled: false  # disable auto-run on startup
+    jdbc:
+      initialize-schema: always
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8761/eureka}
+
+batch:
+  settlement:
+    cron: ${BATCH_SETTLEMENT_CRON:0 0 1 * * *}
+  report:
+    cron: ${BATCH_REPORT_CRON:0 0 2 * * *}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

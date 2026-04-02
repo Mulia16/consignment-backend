@@ -1,0 +1,16 @@
+**/*.log
+**/*.tmp
+**/.DS_Store
+**/Thumbs.db
+**/.idea/
+**/.vscode/
+**/*.iml
+**/.git/
+**/.gitignore
+**/target/
+**/README.md
+.tools/
+CONSIGNMENT_*.md
+CMS_*.md
+SPRINT_*.md
+JIRA_*.csv
