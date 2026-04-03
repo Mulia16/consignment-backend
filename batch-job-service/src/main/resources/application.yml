@@ -15,7 +15,11 @@ spring:
     job:
       enabled: false  # disable auto-run on startup
     jdbc:
-      initialize-schema: always
+      initialize-schema: never  # schema dikelola via schema.sql
+  sql:
+    init:
+      mode: always
+      continue-on-error: true
 
 eureka:
   client:

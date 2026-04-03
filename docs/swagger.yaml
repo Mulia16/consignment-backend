@@ -1,0 +1,2310 @@
+openapi: 3.0.3
+info:
+  title: Consignment Management System (CMS) API
+  description: |
+    Complete API specification for the CMS microservices platform.
+    All requests go through the API Gateway at port 8080.
+
+    **Authentication**: Most endpoints require a Bearer JWT token obtained from `/auth/login`.
+    Include it as: `Authorization: Bearer <token>`
+
+    **Services & Ports**:
+    - API Gateway: 8080 (entry point)
+    - Auth Service: 8083
+    - Consignment Service: 8082
+    - Inventory Service: 8081
+    - Email Service: 8084
+    - Batch Job Service: 8085
+    - Service Registry (Eureka): 8761
+  version: 1.0.0
+  contact:
+    name: CMS Platform Team
+
+servers:
+  - url: http://localhost:8080
+    description: Local via API Gateway
+
+tags:
+  - name: Auth
+    description: Authentication and token management
+  - name: Master Data Sync
+    description: ACMM inbound master data synchronization
+  - name: Consignment Setup
+    description: Item-supplier mapping configuration
+  - name: CSRQ
+    description: Consignment Stock Request (HELD → RELEASED | CANCELLED)
+  - name: CSRV
+    description: Consignment Stock Receive (HELD → RELEASED)
+  - name: CSO
+    description: Customer Stock Order (HELD → RELEASED | ERROR)
+  - name: CSDO
+    description: Customer Delivery Order (HELD → RELEASED → REVERSED)
+  - name: CSR
+    description: Customer Stock Return (HELD → RELEASED → COMPLETED)
+  - name: CSA
+    description: Customer Stock Adjustment (HELD → RELEASED)
+  - name: Settlement
+    description: Settlement lifecycle (HELD → READY_FOR_BILLING → BILLED → SETTLED)
+  - name: Reports
+    description: Operational reports R01–R12
+  - name: Email
+    description: Email notification service
+  - name: Batch Jobs
+    description: Batch job manual triggers
+  - name: Inventory
+    description: Inventory availability queries
+
+
+security:
+  - bearerAuth: []
+
+paths:
+  # ─────────────────────────────────────────────
+  # AUTH SERVICE
+  # ─────────────────────────────────────────────
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Login and obtain JWT token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            example:
+              username: admin
+              password: secret123
+      responses:
+        '200':
+          description: JWT token issued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+              example:
+                token: eyJhbGciOiJIUzI1NiJ9...
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a new user
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+            example:
+              username: john_doe
+              email: john@example.com
+              password: P@ssw0rd!
+      responses:
+        '200':
+          description: User registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                message: User registered successfully
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /auth/validate:
+    post:
+      tags: [Auth]
+      summary: Validate a JWT token
+      security: []
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+          example: Bearer eyJhbGciOiJIUzI1NiJ9...
+      responses:
+        '200':
+          description: Token validation result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidateResponse'
+              example:
+                valid: true
+                username: admin
+        '401':
+          description: Invalid token
+          content:
+            application/json:
+              example:
+                valid: false
+
+
+  # ─────────────────────────────────────────────
+  # MASTER DATA SYNC
+  # ─────────────────────────────────────────────
+  /consignment/api/acmm/master-sync/{entity}:
+    post:
+      tags: [Master Data Sync]
+      summary: Sync master data records for a given entity
+      description: |
+        Supported entities: `items`, `item-prices`, `suppliers`, `contracts`,
+        `companies`, `stores`, `customers`, `reasons`
+      parameters:
+        - name: entity
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [items, item-prices, suppliers, contracts, companies, stores, customers, reasons]
+          example: items
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MasterSyncRequest'
+            example:
+              records:
+                - code: ITEM001
+                  attributes:
+                    hierarchy: ELECTRONICS
+                    itemModel: Samsung Galaxy S24
+                    syncFlag: true
+      responses:
+        '200':
+          description: Sync result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MasterSyncResponse'
+              example:
+                entity: items
+                upserted: 1
+                syncedAt: '2024-01-15T08:00:00Z'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ─────────────────────────────────────────────
+  # CONSIGNMENT SETUP
+  # ─────────────────────────────────────────────
+  /consignment/api/consignment-setup/items:
+    get:
+      tags: [Consignment Setup]
+      summary: List all consignment items
+      responses:
+        '200':
+          description: List of consignment setup items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ConsignmentSetupItemResponse'
+
+  /consignment/api/consignment-setup/item/{itemCode}:
+    get:
+      tags: [Consignment Setup]
+      summary: Get consignment setup for a specific item
+      parameters:
+        - $ref: '#/components/parameters/itemCodePath'
+      responses:
+        '200':
+          description: Item setup detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsignmentSetupItemResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /consignment/api/consignment-setup/item/{itemCode}/external-supplier:
+    post:
+      tags: [Consignment Setup]
+      summary: Add external supplier mapping to an item
+      parameters:
+        - $ref: '#/components/parameters/itemCodePath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExternalSupplierSetupRequest'
+            example:
+              supplierCode: SUPP001
+              supplierType: EXTERNAL
+              contractNumber: CONTRACT-2024-001
+              consigneeCompany: COMP01
+              consigneeStore: STORE01
+              currentInventoryQty: 0
+      responses:
+        '200':
+          description: External supplier added
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExternalSupplierSetupResponse'
+
+  /consignment/api/consignment-setup/item/{itemCode}/external-supplier/{id}:
+    put:
+      tags: [Consignment Setup]
+      summary: Update external supplier mapping
+      parameters:
+        - $ref: '#/components/parameters/itemCodePath'
+        - $ref: '#/components/parameters/idPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExternalSupplierSetupRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExternalSupplierSetupResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Consignment Setup]
+      summary: Remove external supplier mapping
+      parameters:
+        - $ref: '#/components/parameters/itemCodePath'
+        - $ref: '#/components/parameters/idPath'
+      responses:
+        '204':
+          description: Deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /consignment/api/consignment-setup/item/{itemCode}/internal-supplier:
+    post:
+      tags: [Consignment Setup]
+      summary: Add internal supplier mapping to an item
+      parameters:
+        - $ref: '#/components/parameters/itemCodePath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InternalSupplierSetupRequest'
+            example:
+              supplierCode: INT-SUPP001
+              supplierStore: WAREHOUSE01
+              consigneeCompany: COMP01
+              consigneeStore: STORE01
+      responses:
+        '200':
+          description: Internal supplier added
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalSupplierSetupResponse'
+
+
+  # ─────────────────────────────────────────────
+  # CSRQ - Consignment Stock Request
+  # ─────────────────────────────────────────────
+  /consignment/api/csrq:
+    get:
+      tags: [CSRQ]
+      summary: Search CSRQ documents
+      parameters:
+        - $ref: '#/components/parameters/companyQuery'
+        - $ref: '#/components/parameters/storeQuery'
+        - $ref: '#/components/parameters/supplierCodeQuery'
+        - $ref: '#/components/parameters/supplierContractQuery'
+        - name: branch
+          in: query
+          schema: { type: string }
+        - name: internalSupplierStore
+          in: query
+          schema: { type: string }
+        - name: createdMethod
+          in: query
+          schema: { type: string }
+        - name: referenceNo
+          in: query
+          schema: { type: string }
+        - name: itemCode
+          in: query
+          schema: { type: string }
+        - $ref: '#/components/parameters/statusQuery'
+      responses:
+        '200':
+          description: List of CSRQ documents
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CsrqResponse'
+    post:
+      tags: [CSRQ]
+      summary: Create a new CSRQ document
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CsrqRequest'
+            example:
+              company: COMP01
+              store: STORE01
+              supplierCode: SUPP001
+              supplierContract: CONTRACT-2024-001
+              notes: Monthly stock request
+              createdBy: user01
+              createdMethod: MANUAL
+              items:
+                - itemCode: ITEM001
+                  requestQty: 100
+                  requestUom: PCS
+      responses:
+        '200':
+          description: CSRQ created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CsrqResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /consignment/api/csrq/{id}:
+    get:
+      tags: [CSRQ]
+      summary: Get CSRQ by ID
+      parameters:
+        - $ref: '#/components/parameters/idPath'
+      responses:
+        '200':
+          description: CSRQ detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CsrqResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [CSRQ]
+      summary: Delete a CSRQ document (only HELD status)
+      parameters:
+        - $ref: '#/components/parameters/idPath'
+      responses:
+        '204':
+          description: Deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /consignment/api/csrq/{id}/release:
+    put:
+      tags: [CSRQ]
+      summary: Release a CSRQ (HELD → RELEASED)
+      parameters:
+        - $ref: '#/components/parameters/idPath'
+      responses:
+        '200':
+          description: CSRQ released
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CsrqResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ─────────────────────────────────────────────
+  # CSRV - Consignment Stock Receive
+  # ─────────────────────────────────────────────
+  /consignment/api/csrv:
+    get:
+      tags: [CSRV]
+      summary: Search CSRV documents
+      parameters:
+        - $ref: '#/components/parameters/companyQuery'
+        - name: receivingStore
+          in: query
+          schema: { type: string }
+        - $ref: '#/components/parameters/supplierCodeQuery'
+        - $ref: '#/components/parameters/supplierContractQuery'
+        - name: branch
+          in: query
+          schema: { type: string }
+        - name: createdMethod
+          in: query
+          schema: { type: string }
+        - name: referenceNo
+          in: query
+          schema: { type: string }
+        - name: itemCode
+          in: query
+          schema: { type: string }
+        - $ref: '#/components/parameters/statusQuery'
+      responses:
+        '200':
+          description: List of CSRV documents
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CsrvResponse'
+    post:
+      tags: [CSRV]
+      summary: Create a new CSRV document
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CsrvRequest'
+            example:
+              company: COMP01
+              receivingStore: STORE01
+              supplierCode: SUPP001
+              supplierContract: CONTRACT-2024-001
+              supplierDoNo: DO-2024-001
+              deliveryDate: '2024-01-15'
+              createdBy: user01
+              createdMethod: MANUAL
+              items:
+                - itemCode: ITEM001
+                  availableQty: 0
+                  requestQty: 100
+                  receivingQty: 100
+      responses:
+        '200':
+          description: CSRV created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CsrvResponse'
+
+  /consignment/api/csrv/{id}:
+    get:
+      tags: [CSRV]
+      summary: Get CSRV by ID
+      parameters:
+        - $ref: '#/components/parameters/idPath'
+      responses:
+        '200':
+          description: CSRV detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CsrvResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /consignment/api/csrv/{id}/release:
+    put:
+      tags: [CSRV]
+      summary: Release a CSRV (HELD → RELEASED)
+      parameters:
+        - $ref: '#/components/parameters/idPath'
+      responses:
+        '200':
+          description: CSRV released
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CsrvResponse'
+
+  /consignment/api/acmm/csrv/auto-create:
+    post:
+      tags: [CSRV]
+      summary: Auto-create CSRV from ACMM integration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CsrvRequest'
+      responses:
+        '200':
+          description: CSRV auto-created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CsrvResponse'
+
+
+  # ─────────────────────────────────────────────
+  # CSO - Customer Stock Order
+  # ─────────────────────────────────────────────
+  /consignment/api/cso:
+    get:
+      tags: [CSO]
+      summary: Search CSO documents
+      parameters:
+        - $ref: '#/components/parameters/companyQuery'
+        - $ref: '#/components/parameters/storeQuery'
+        - name: customerCode
+          in: query
+          schema: { type: string }
+        - $ref: '#/components/parameters/supplierCodeQuery'
+        - $ref: '#/components/parameters/supplierContractQuery'
+        - name: createdMethod
+          in: query
+          schema: { type: string }
+        - name: referenceNo
+          in: query
+          schema: { type: string }
+        - name: itemCode
+          in: query
+          schema: { type: string }
+        - $ref: '#/components/parameters/statusQuery'
+      responses:
+        '200':
+          description: List of CSO documents
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CsoResponse'
+    post:
+      tags: [CSO]
+      summary: Create a new CSO document
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CsoRequest'
+            example:
+              company: COMP01
+              store: STORE01
+              customerCode: CUST001
+              customerBranch: BRANCH01
+              customerEmail: customer@example.com
+              supplierCode: SUPP001
+              supplierContract: CONTRACT-2024-001
+              autoGenerateCsdo: false
+              note: Q1 stock order
+              createdBy: user01
+              createdMethod: MANUAL
+              items:
+                - itemCode: ITEM001
+                  qty: 50
+                  uom: PCS
+      responses:
+        '200':
+          description: CSO created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CsoResponse'
+
+  /consignment/api/cso/{id}:
+    get:
+      tags: [CSO]
+      summary: Get CSO by ID
+      parameters:
+        - $ref: '#/components/parameters/idPath'
+      responses:
+        '200':
+          description: CSO detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CsoResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [CSO]
+      summary: Delete a CSO document (only HELD status)
+      parameters:
+        - $ref: '#/components/parameters/idPath'
+      responses:
+        '204':
+          description: Deleted
+
+  /consignment/api/cso/{id}/release:
+    put:
+      tags: [CSO]
+      summary: Release a CSO (HELD → RELEASED | ERROR)
+      description: |
+        Triggers reservation posting (Allocate + Forecast).
+        If `autoGenerateCsdo` is true, a CSDO is automatically created.
+      parameters:
+        - $ref: '#/components/parameters/idPath'
+        - name: X-User
+          in: header
+          required: false
+          schema: { type: string }
+          description: Username of the person releasing
+      responses:
+        '200':
+          description: CSO released
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CsoResponse'
+
+  /consignment/api/acmm/cso/auto-create:
+    post:
+      tags: [CSO]
+      summary: Auto-create CSO from ACMM/POS integration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CsoRequest'
+      responses:
+        '200':
+          description: CSO auto-created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CsoResponse'
+
+  # ─────────────────────────────────────────────
+  # CSDO - Customer Delivery Order
+  # ─────────────────────────────────────────────
+  /consignment/api/csdo:
+    get:
+      tags: [CSDO]
+      summary: Search CSDO documents
+      parameters:
+        - $ref: '#/components/parameters/companyQuery'
+        - $ref: '#/components/parameters/storeQuery'
+        - name: customerCode
+          in: query
+          schema: { type: string }
+        - $ref: '#/components/parameters/statusQuery'
+        - name: createdMethod
+          in: query
+          schema: { type: string }
+        - name: referenceNo
+          in: query
+          schema: { type: string }
+        - name: itemCode
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: List of CSDO documents
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CsdoResponse'
+
+  /consignment/api/csdo/{id}:
+    get:
+      tags: [CSDO]
+      summary: Get CSDO by ID
+      parameters:
+        - $ref: '#/components/parameters/idPath'
+      responses:
+        '200':
+          description: CSDO detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CsdoResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /consignment/api/csdo/transfer/{csoId}:
+    post:
+      tags: [CSDO]
+      summary: Create CSDO by transferring from a released CSO
+      parameters:
+        - name: csoId
+          in: path
+          required: true
+          schema: { type: string }
+          description: ID of the source CSO
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CsdoTransferRequest'
+            example:
+              requireGenerateCdo: false
+              shippingMode: COURIER
+              transporter: JNE
+              createdBy: user01
+      responses:
+        '200':
+          description: CSDO created from CSO
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CsdoResponse'
+
+  /consignment/api/csdo/{id}/release:
+    put:
+      tags: [CSDO]
+      summary: Release a CSDO (HELD → RELEASED)
+      parameters:
+        - $ref: '#/components/parameters/idPath'
+      responses:
+        '200':
+          description: CSDO released
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CsdoResponse'
+
+  /consignment/api/csdo/{id}/reverse:
+    put:
+      tags: [CSDO]
+      summary: Reverse a CSDO (RELEASED → REVERSED)
+      parameters:
+        - $ref: '#/components/parameters/idPath'
+      responses:
+        '200':
+          description: CSDO reversed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CsdoResponse'
+
+
+  # ─────────────────────────────────────────────
+  # CSR - Customer Stock Return
+  # ─────────────────────────────────────────────
+  /consignment/api/csr:
+    get:
+      tags: [CSR]
+      summary: Search CSR documents
+      parameters:
+        - $ref: '#/components/parameters/companyQuery'
+        - $ref: '#/components/parameters/storeQuery'
+        - $ref: '#/components/parameters/supplierCodeQuery'
+        - $ref: '#/components/parameters/supplierContractQuery'
+        - $ref: '#/components/parameters/statusQuery'
+        - name: createdBy
+          in: query
+          schema: { type: string }
+        - name: referenceNo
+          in: query
+          schema: { type: string }
+        - name: itemCode
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: List of CSR documents
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CsrResponse'
+    post:
+      tags: [CSR]
+      summary: Create a new CSR document
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CsrRequest'
+            example:
+              company: COMP01
+              store: STORE01
+              supplierCode: SUPP001
+              supplierContract: CONTRACT-2024-001
+              reasonCode: DEFECTIVE
+              remark: Customer returned defective items
+              createdBy: user01
+              items:
+                - itemCode: ITEM001
+                  uom: PCS
+                  qty: 10
+      responses:
+        '200':
+          description: CSR created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CsrResponse'
+
+  /consignment/api/csr/{id}:
+    get:
+      tags: [CSR]
+      summary: Get CSR by ID
+      parameters:
+        - $ref: '#/components/parameters/idPath'
+      responses:
+        '200':
+          description: CSR detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CsrResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /consignment/api/csr/{id}/release:
+    put:
+      tags: [CSR]
+      summary: Release a CSR (HELD → RELEASED)
+      parameters:
+        - $ref: '#/components/parameters/idPath'
+      responses:
+        '200':
+          description: CSR released
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CsrResponse'
+
+  /consignment/api/csr/{id}/detail/{detailId}/actual-qty:
+    put:
+      tags: [CSR]
+      summary: Update actual received quantity for a CSR detail line
+      parameters:
+        - $ref: '#/components/parameters/idPath'
+        - name: detailId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CsrActualQtyUpdateRequest'
+            example:
+              actualQty: 9
+      responses:
+        '200':
+          description: Actual qty updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CsrResponse'
+
+  /consignment/api/csr/{id}/complete:
+    put:
+      tags: [CSR]
+      summary: Complete a CSR (RELEASED → COMPLETED) — deducts inventory
+      parameters:
+        - $ref: '#/components/parameters/idPath'
+      responses:
+        '200':
+          description: CSR completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CsrResponse'
+
+  # ─────────────────────────────────────────────
+  # CSA - Customer Stock Adjustment
+  # ─────────────────────────────────────────────
+  /consignment/api/csa:
+    get:
+      tags: [CSA]
+      summary: Search CSA documents
+      parameters:
+        - $ref: '#/components/parameters/companyQuery'
+        - $ref: '#/components/parameters/storeQuery'
+        - name: transactionType
+          in: query
+          schema:
+            type: string
+            enum: [ADJ_IN, ADJ_OUT]
+        - $ref: '#/components/parameters/statusQuery'
+        - name: createdBy
+          in: query
+          schema: { type: string }
+        - name: referenceNo
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: List of CSA documents
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CsaResponse'
+    post:
+      tags: [CSA]
+      summary: Create a new CSA document
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CsaRequest'
+            example:
+              company: COMP01
+              store: STORE01
+              supplierCode: SUPP001
+              supplierContract: CONTRACT-2024-001
+              transactionType: ADJ_IN
+              reasonCode: STOCK_COUNT
+              remark: Physical count adjustment
+              createdBy: user01
+              items:
+                - itemCode: ITEM001
+                  itemName: Samsung Galaxy S24
+                  qty: 5
+                  uom: PCS
+                  settlementDecision: INCLUDE_IN_SETTLEMENT
+      responses:
+        '200':
+          description: CSA created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CsaResponse'
+
+  /consignment/api/csa/{id}:
+    get:
+      tags: [CSA]
+      summary: Get CSA by ID
+      parameters:
+        - $ref: '#/components/parameters/idPath'
+      responses:
+        '200':
+          description: CSA detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CsaResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /consignment/api/csa/{id}/release:
+    put:
+      tags: [CSA]
+      summary: Release a CSA (HELD → RELEASED)
+      parameters:
+        - $ref: '#/components/parameters/idPath'
+        - name: X-User
+          in: header
+          required: false
+          schema: { type: string }
+      responses:
+        '200':
+          description: CSA released
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CsaResponse'
+
+
+  # ─────────────────────────────────────────────
+  # SETTLEMENT
+  # ─────────────────────────────────────────────
+  /consignment/api/settlement:
+    get:
+      tags: [Settlement]
+      summary: Search settlement documents
+      parameters:
+        - $ref: '#/components/parameters/companyQuery'
+        - $ref: '#/components/parameters/storeQuery'
+        - name: settlementType
+          in: query
+          schema:
+            type: string
+            enum: [CUSTOMER, SUPPLIER]
+        - name: customerCode
+          in: query
+          schema: { type: string }
+        - $ref: '#/components/parameters/supplierCodeQuery'
+        - $ref: '#/components/parameters/statusQuery'
+        - name: createdBy
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: List of settlement documents
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SettlementResponse'
+    post:
+      tags: [Settlement]
+      summary: Create a new settlement document manually
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SettlementRequest'
+            example:
+              company: COMP01
+              store: STORE01
+              settlementType: CUSTOMER
+              customerCode: CUST001
+              currency: IDR
+              createdBy: user01
+              remark: Manual settlement Jan 2024
+      responses:
+        '200':
+          description: Settlement created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SettlementResponse'
+
+  /consignment/api/settlement/{id}:
+    get:
+      tags: [Settlement]
+      summary: Get settlement by ID
+      parameters:
+        - $ref: '#/components/parameters/idPath'
+      responses:
+        '200':
+          description: Settlement detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SettlementResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /consignment/api/settlement/{id}/details/from-documents:
+    post:
+      tags: [Settlement]
+      summary: Post settlement detail lines from source documents
+      parameters:
+        - $ref: '#/components/parameters/idPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SettlementDocumentPostRequest'
+            example:
+              documents:
+                - documentType: CSO
+                  documentId: cso-uuid-001
+                  unitPrice: 150000
+                  remark: CSO Jan batch
+      responses:
+        '200':
+          description: Details posted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SettlementResponse'
+
+  /consignment/api/settlement/generate:
+    post:
+      tags: [Settlement]
+      summary: Batch generate settlement from documents in a date range
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SettlementBatchGenerateRequest'
+            example:
+              company: COMP01
+              store: STORE01
+              settlementType: CUSTOMER
+              customerCode: CUST001
+              currency: IDR
+              createdBy: settlement-batch-job
+              fromDate: '2024-01-01'
+              toDate: '2024-01-31'
+              defaultUnitPrice: 0
+      responses:
+        '200':
+          description: Settlement generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SettlementResponse'
+
+  /consignment/api/settlement/{id}/prepare-for-billing:
+    put:
+      tags: [Settlement]
+      summary: Prepare settlement for billing (HELD → READY_FOR_BILLING)
+      parameters:
+        - $ref: '#/components/parameters/idPath'
+      responses:
+        '200':
+          description: Status updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SettlementResponse'
+
+  /consignment/api/settlement/{id}/mark-as-billed:
+    put:
+      tags: [Settlement]
+      summary: Mark settlement as billed (READY_FOR_BILLING → BILLED)
+      parameters:
+        - $ref: '#/components/parameters/idPath'
+      responses:
+        '200':
+          description: Status updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SettlementResponse'
+
+  /consignment/api/settlement/{id}/mark-as-settled:
+    put:
+      tags: [Settlement]
+      summary: Mark settlement as settled (BILLED → SETTLED)
+      parameters:
+        - $ref: '#/components/parameters/idPath'
+      responses:
+        '200':
+          description: Status updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SettlementResponse'
+
+
+  # ─────────────────────────────────────────────
+  # REPORTS
+  # ─────────────────────────────────────────────
+  /consignment/api/reports/csrq:
+    get:
+      tags: [Reports]
+      summary: R01 - CSRQ transactions by period
+      parameters:
+        - $ref: '#/components/parameters/companyQuery'
+        - $ref: '#/components/parameters/storeQuery'
+        - $ref: '#/components/parameters/supplierCodeQuery'
+        - $ref: '#/components/parameters/fromDateQuery'
+        - $ref: '#/components/parameters/toDateQuery'
+        - $ref: '#/components/parameters/statusQuery'
+      responses:
+        '200':
+          description: R01 report rows
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ReportRow'
+
+  /consignment/api/reports/csrv:
+    get:
+      tags: [Reports]
+      summary: R02 - CSRV transactions by period
+      parameters:
+        - $ref: '#/components/parameters/companyQuery'
+        - $ref: '#/components/parameters/storeQuery'
+        - $ref: '#/components/parameters/supplierCodeQuery'
+        - $ref: '#/components/parameters/fromDateQuery'
+        - $ref: '#/components/parameters/toDateQuery'
+        - $ref: '#/components/parameters/statusQuery'
+      responses:
+        '200':
+          description: R02 report rows
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ReportRow'
+
+  /consignment/api/reports/cso:
+    get:
+      tags: [Reports]
+      summary: R03 - CSO transactions by period
+      parameters:
+        - $ref: '#/components/parameters/companyQuery'
+        - $ref: '#/components/parameters/storeQuery'
+        - name: customerCode
+          in: query
+          schema: { type: string }
+        - $ref: '#/components/parameters/fromDateQuery'
+        - $ref: '#/components/parameters/toDateQuery'
+        - $ref: '#/components/parameters/statusQuery'
+      responses:
+        '200':
+          description: R03 report rows
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ReportRow'
+
+  /consignment/api/reports/csdo:
+    get:
+      tags: [Reports]
+      summary: R04 - CSDO transactions by period
+      parameters:
+        - $ref: '#/components/parameters/companyQuery'
+        - $ref: '#/components/parameters/storeQuery'
+        - name: customerCode
+          in: query
+          schema: { type: string }
+        - $ref: '#/components/parameters/fromDateQuery'
+        - $ref: '#/components/parameters/toDateQuery'
+        - $ref: '#/components/parameters/statusQuery'
+      responses:
+        '200':
+          description: R04 report rows
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ReportRow'
+
+  /consignment/api/reports/csr:
+    get:
+      tags: [Reports]
+      summary: R05 - CSR transactions by period
+      parameters:
+        - $ref: '#/components/parameters/companyQuery'
+        - $ref: '#/components/parameters/storeQuery'
+        - $ref: '#/components/parameters/supplierCodeQuery'
+        - $ref: '#/components/parameters/fromDateQuery'
+        - $ref: '#/components/parameters/toDateQuery'
+        - $ref: '#/components/parameters/statusQuery'
+      responses:
+        '200':
+          description: R05 report rows
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ReportRow'
+
+  /consignment/api/reports/csa:
+    get:
+      tags: [Reports]
+      summary: R06 - CSA transactions by period
+      parameters:
+        - $ref: '#/components/parameters/companyQuery'
+        - $ref: '#/components/parameters/storeQuery'
+        - $ref: '#/components/parameters/supplierCodeQuery'
+        - $ref: '#/components/parameters/fromDateQuery'
+        - $ref: '#/components/parameters/toDateQuery'
+        - $ref: '#/components/parameters/statusQuery'
+      responses:
+        '200':
+          description: R06 report rows
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ReportRow'
+
+  /consignment/api/reports/settlement-summary:
+    get:
+      tags: [Reports]
+      summary: R07 - Settlement summary by period
+      parameters:
+        - $ref: '#/components/parameters/companyQuery'
+        - $ref: '#/components/parameters/storeQuery'
+        - name: settlementType
+          in: query
+          schema:
+            type: string
+            enum: [CUSTOMER, SUPPLIER]
+        - $ref: '#/components/parameters/fromDateQuery'
+        - $ref: '#/components/parameters/toDateQuery'
+        - $ref: '#/components/parameters/statusQuery'
+      responses:
+        '200':
+          description: R07 report rows
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ReportRow'
+
+  /consignment/api/reports/settlement-detail/{settlementId}:
+    get:
+      tags: [Reports]
+      summary: R08 - Settlement detail lines for a specific settlement
+      parameters:
+        - name: settlementId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: R08 report rows
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ReportRow'
+
+  /consignment/api/reports/supplier-book-value:
+    get:
+      tags: [Reports]
+      summary: R09 - Supplier book value inventory
+      parameters:
+        - $ref: '#/components/parameters/companyQuery'
+        - $ref: '#/components/parameters/storeQuery'
+        - $ref: '#/components/parameters/supplierCodeQuery'
+        - name: supplierContract
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: R09 stock summary rows
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/StockSummaryRow'
+
+  /consignment/api/reports/customer-inventory:
+    get:
+      tags: [Reports]
+      summary: R10 - Customer consignment inventory on hand
+      parameters:
+        - $ref: '#/components/parameters/storeQuery'
+        - name: customerCode
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: R10 customer inventory rows
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CustomerInventoryRow'
+
+  /consignment/api/reports/reservations:
+    get:
+      tags: [Reports]
+      summary: R11 - Open reservations (allocations + forecasts)
+      parameters:
+        - $ref: '#/components/parameters/storeQuery'
+        - name: itemCode
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: R11 reservation rows
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ReportRow'
+
+  /consignment/api/reports/consignment-setup:
+    get:
+      tags: [Reports]
+      summary: R12 - Consignment setup item-supplier mapping
+      parameters:
+        - $ref: '#/components/parameters/companyQuery'
+        - $ref: '#/components/parameters/storeQuery'
+        - $ref: '#/components/parameters/supplierCodeQuery'
+      responses:
+        '200':
+          description: R12 setup rows
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ReportRow'
+
+  # ─────────────────────────────────────────────
+  # EMAIL SERVICE
+  # ─────────────────────────────────────────────
+  /email/send:
+    post:
+      tags: [Email]
+      summary: Send an email notification
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailRequest'
+            example:
+              to: customer@example.com
+              subject: Your order has been delivered
+              template: csdo-notification
+              variables:
+                docNo: CSDO-2024-001
+                customerName: PT Maju Jaya
+      responses:
+        '202':
+          description: Email queued for delivery
+          content:
+            application/json:
+              example:
+                message: Email queued for delivery
+
+  # ─────────────────────────────────────────────
+  # BATCH JOB SERVICE
+  # ─────────────────────────────────────────────
+  /batch/settlement/trigger:
+    post:
+      tags: [Batch Jobs]
+      summary: Manually trigger nightly settlement batch job
+      parameters:
+        - name: businessDate
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+          example: '2024-01-31'
+      responses:
+        '200':
+          description: Job triggered
+          content:
+            application/json:
+              example:
+                status: COMPLETED
+                jobId: 1
+
+  /batch/report/trigger:
+    post:
+      tags: [Batch Jobs]
+      summary: Manually trigger report pre-computation batch job
+      parameters:
+        - name: reportDate
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+          example: '2024-01-30'
+      responses:
+        '200':
+          description: Job triggered
+          content:
+            application/json:
+              example:
+                status: COMPLETED
+                jobId: 2
+
+  # ─────────────────────────────────────────────
+  # INVENTORY SERVICE
+  # ─────────────────────────────────────────────
+  /inventory/api/v1/inventory/{sku}/availability:
+    get:
+      tags: [Inventory]
+      summary: Get available inventory quantity for a SKU
+      parameters:
+        - name: sku
+          in: path
+          required: true
+          schema: { type: string }
+          example: ITEM001
+      responses:
+        '200':
+          description: Availability info
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AvailabilityResponse'
+              example:
+                sku: ITEM001
+                availableQty: 250
+
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    idPath:
+      name: id
+      in: path
+      required: true
+      schema: { type: string }
+    itemCodePath:
+      name: itemCode
+      in: path
+      required: true
+      schema: { type: string }
+      example: ITEM001
+    companyQuery:
+      name: company
+      in: query
+      schema: { type: string }
+      example: COMP01
+    storeQuery:
+      name: store
+      in: query
+      schema: { type: string }
+      example: STORE01
+    supplierCodeQuery:
+      name: supplierCode
+      in: query
+      schema: { type: string }
+      example: SUPP001
+    supplierContractQuery:
+      name: supplierContract
+      in: query
+      schema: { type: string }
+      example: CONTRACT-2024-001
+    statusQuery:
+      name: status
+      in: query
+      schema: { type: string }
+    fromDateQuery:
+      name: fromDate
+      in: query
+      schema:
+        type: string
+        format: date
+      example: '2024-01-01'
+    toDateQuery:
+      name: toDate
+      in: query
+      schema:
+        type: string
+        format: date
+      example: '2024-01-31'
+
+  responses:
+    Unauthorized:
+      description: Missing or invalid JWT token
+      content:
+        application/json:
+          example:
+            error: Unauthorized
+    BadRequest:
+      description: Validation error or invalid request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorResponse'
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorResponse'
+
+  schemas:
+    # ── Auth ──────────────────────────────────
+    LoginRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username: { type: string, example: admin }
+        password: { type: string, example: secret123 }
+
+    LoginResponse:
+      type: object
+      properties:
+        token: { type: string, example: eyJhbGciOiJIUzI1NiJ9... }
+      example:
+        token: "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbiIsInJvbGVzIjpbIlJPTEVfQURNSU4iXX0.sig"
+
+    RegisterRequest:
+      type: object
+      required: [username, email, password]
+      properties:
+        username: { type: string, example: john_doe }
+        email: { type: string, format: email, example: john@example.com }
+        password: { type: string, example: P@ssw0rd! }
+
+    ValidateResponse:
+      type: object
+      properties:
+        valid: { type: boolean }
+        username: { type: string }
+      example:
+        valid: true
+        username: "admin"
+
+    MessageResponse:
+      type: object
+      properties:
+        message: { type: string }
+      example:
+        message: "User registered successfully"
+
+    ApiErrorResponse:
+      type: object
+      properties:
+        error: { type: string }
+        message: { type: string }
+        timestamp: { type: string, format: date-time }
+      example:
+        error: "BUSINESS_RULE_VIOLATION"
+        message: "Only CSRQ with status HELD can be released"
+        timestamp: "2024-01-15T08:00:00Z"
+
+    # ── Master Sync ───────────────────────────
+    MasterSyncRequest:
+      type: object
+      required: [records]
+      properties:
+        records:
+          type: array
+          items:
+            $ref: '#/components/schemas/MasterSyncRecord'
+
+    MasterSyncRecord:
+      type: object
+      required: [code]
+      properties:
+        code: { type: string, example: ITEM001 }
+        attributes:
+          type: object
+          additionalProperties: true
+          example:
+            hierarchy: ELECTRONICS
+            itemModel: Samsung Galaxy S24
+
+    MasterSyncResponse:
+      type: object
+      properties:
+        entity: { type: string, example: items }
+        upserted: { type: integer, example: 5 }
+        syncedAt: { type: string, format: date-time }
+      example:
+        entity: "items"
+        upserted: 1
+        syncedAt: "2024-01-15T08:00:00Z"
+
+    # ── Consignment Setup ─────────────────────
+    ConsignmentSetupItemResponse:
+      type: object
+      properties:
+        itemCode: { type: string }
+        hierarchy: { type: string }
+        itemModel: { type: string }
+        syncFlag: { type: boolean }
+        externalSuppliers:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExternalSupplierSetupResponse'
+        internalSuppliers:
+          type: array
+          items:
+            $ref: '#/components/schemas/InternalSupplierSetupResponse'
+
+    ExternalSupplierSetupRequest:
+      type: object
+      required: [supplierCode, supplierType, contractNumber, consigneeCompany, consigneeStore]
+      properties:
+        supplierCode: { type: string, example: SUPP001 }
+        supplierType: { type: string, example: EXTERNAL }
+        contractNumber: { type: string, example: CONTRACT-2024-001 }
+        consigneeCompany: { type: string, example: COMP01 }
+        consigneeStore: { type: string, example: STORE01 }
+        currentInventoryQty: { type: integer, minimum: 0, default: 0 }
+
+    ExternalSupplierSetupResponse:
+      type: object
+      properties:
+        id: { type: string }
+        itemCode: { type: string }
+        supplierCode: { type: string }
+        supplierType: { type: string }
+        supplierContract: { type: string }
+        consigneeCompany: { type: string }
+        consigneeStore: { type: string }
+        currentInventoryQty: { type: integer }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    InternalSupplierSetupRequest:
+      type: object
+      required: [supplierCode, supplierStore, consigneeCompany, consigneeStore]
+      properties:
+        supplierCode: { type: string, example: INT-SUPP001 }
+        supplierStore: { type: string, example: WAREHOUSE01 }
+        consigneeCompany: { type: string, example: COMP01 }
+        consigneeStore: { type: string, example: STORE01 }
+
+    InternalSupplierSetupResponse:
+      type: object
+      properties:
+        id: { type: string }
+        itemCode: { type: string }
+        supplierCode: { type: string }
+        supplierStore: { type: string }
+        consigneeCompany: { type: string }
+        consigneeStore: { type: string }
+        createdAt: { type: string, format: date-time }
+
+
+    # ── CSRQ ─────────────────────────────────
+    CsrqRequest:
+      type: object
+      required: [company, store, supplierCode, supplierContract, createdBy, createdMethod, items]
+      properties:
+        company: { type: string, example: COMP01 }
+        store: { type: string, example: STORE01 }
+        supplierCode: { type: string, example: SUPP001 }
+        supplierContract: { type: string, example: CONTRACT-2024-001 }
+        branch: { type: string }
+        internalSupplierStore: { type: string }
+        notes: { type: string }
+        createdBy: { type: string, example: user01 }
+        createdMethod: { type: string, enum: [MANUAL, AUTO], example: MANUAL }
+        referenceNo: { type: string }
+        items:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/CsrqDetailRequest'
+
+    CsrqDetailRequest:
+      type: object
+      required: [itemCode, requestQty, requestUom]
+      properties:
+        itemCode: { type: string, example: ITEM001 }
+        requestQty: { type: number, minimum: 0.0001, example: 100 }
+        requestUom: { type: string, example: PCS }
+
+    CsrqResponse:
+      type: object
+      properties:
+        id: { type: string }
+        docNo: { type: string, example: CSRQ-00001 }
+        company: { type: string }
+        store: { type: string }
+        supplierCode: { type: string }
+        supplierContract: { type: string }
+        branch: { type: string }
+        internalSupplierStore: { type: string }
+        notes: { type: string }
+        status:
+          type: string
+          enum: [HELD, RELEASED, CANCELLED]
+        createdBy: { type: string }
+        createdMethod: { type: string }
+        referenceNo: { type: string }
+        releasedAt: { type: string, format: date-time }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CsrqResponseDetail'
+      example:
+        id: "csrq-001"
+        docNo: "CSRQ-00001"
+        company: "COMP01"
+        store: "STORE01"
+        supplierCode: "SUPP001"
+        supplierContract: "CONTRACT-2024-001"
+        notes: "Monthly stock request"
+        status: "HELD"
+        createdBy: "user01"
+        createdMethod: "MANUAL"
+        releasedAt: null
+        createdAt: "2024-01-15T08:00:00Z"
+        updatedAt: "2024-01-15T08:00:00Z"
+        items:
+          - id: "d-001"
+            itemCode: "ITEM001"
+            requestQty: 100
+            requestUom: "PCS"
+
+    CsrqResponseDetail:
+      type: object
+      properties:
+        id: { type: string }
+        itemCode: { type: string }
+        requestQty: { type: number }
+        requestUom: { type: string }
+
+    # ── CSRV ─────────────────────────────────
+    CsrvRequest:
+      type: object
+      required: [company, receivingStore, supplierCode, supplierContract, createdBy, createdMethod, items]
+      properties:
+        company: { type: string, example: COMP01 }
+        receivingStore: { type: string, example: STORE01 }
+        supplierCode: { type: string, example: SUPP001 }
+        supplierContract: { type: string, example: CONTRACT-2024-001 }
+        branch: { type: string }
+        supplierDoNo: { type: string, example: DO-2024-001 }
+        deliveryDate: { type: string, format: date, example: '2024-01-15' }
+        remark: { type: string }
+        createdBy: { type: string, example: user01 }
+        createdMethod: { type: string, enum: [MANUAL, AUTO], example: MANUAL }
+        referenceNo: { type: string }
+        items:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/CsrvDetailRequest'
+
+    CsrvDetailRequest:
+      type: object
+      required: [itemCode, availableQty, requestQty, receivingQty]
+      properties:
+        itemCode: { type: string, example: ITEM001 }
+        availableQty: { type: number, minimum: 0, example: 0 }
+        requestQty: { type: number, minimum: 0.0001, example: 100 }
+        receivingQty: { type: number, minimum: 0.0001, example: 100 }
+
+    CsrvResponse:
+      type: object
+      properties:
+        id: { type: string }
+        docNo: { type: string, example: CSRV-2024-001 }
+        company: { type: string }
+        receivingStore: { type: string }
+        supplierCode: { type: string }
+        supplierContract: { type: string }
+        branch: { type: string }
+        supplierDoNo: { type: string }
+        deliveryDate: { type: string, format: date }
+        remark: { type: string }
+        status:
+          type: string
+          enum: [HELD, RELEASED]
+        createdBy: { type: string }
+        createdMethod: { type: string }
+        referenceNo: { type: string }
+        releasedAt: { type: string, format: date-time }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CsrvResponseDetail'
+
+    CsrvResponseDetail:
+      type: object
+      properties:
+        id: { type: string }
+        itemCode: { type: string }
+        availableQty: { type: number }
+        requestQty: { type: number }
+        receivingQty: { type: number }
+
+    # ── CSO ──────────────────────────────────
+    CsoRequest:
+      type: object
+      required: [company, store, customerCode, supplierCode, supplierContract, createdBy, createdMethod, items]
+      properties:
+        company: { type: string, example: COMP01 }
+        store: { type: string, example: STORE01 }
+        customerCode: { type: string, example: CUST001 }
+        customerBranch: { type: string }
+        customerEmail: { type: string, format: email }
+        supplierCode: { type: string, example: SUPP001 }
+        supplierContract: { type: string, example: CONTRACT-2024-001 }
+        autoGenerateCsdo: { type: boolean, default: false }
+        note: { type: string }
+        createdBy: { type: string, example: user01 }
+        createdMethod: { type: string, enum: [MANUAL, AUTO], example: MANUAL }
+        referenceNo: { type: string }
+        items:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/CsoDetailRequest'
+
+    CsoDetailRequest:
+      type: object
+      required: [itemCode, qty, uom]
+      properties:
+        itemCode: { type: string, example: ITEM001 }
+        qty: { type: number, minimum: 0.0001, example: 50 }
+        uom: { type: string, example: PCS }
+
+    CsoResponse:
+      type: object
+      properties:
+        id: { type: string }
+        docNo: { type: string, example: CSO-2024-001 }
+        company: { type: string }
+        store: { type: string }
+        customerCode: { type: string }
+        customerBranch: { type: string }
+        customerEmail: { type: string }
+        supplierCode: { type: string }
+        supplierContract: { type: string }
+        autoGenerateCsdo: { type: boolean }
+        note: { type: string }
+        status:
+          type: string
+          enum: [HELD, RELEASED, ERROR]
+        createdBy: { type: string }
+        createdMethod: { type: string }
+        referenceNo: { type: string }
+        releasedAt: { type: string, format: date-time }
+        releasedBy: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CsoResponseDetail'
+
+    CsoResponseDetail:
+      type: object
+      properties:
+        id: { type: string }
+        itemCode: { type: string }
+        qty: { type: number }
+        uom: { type: string }
+
+    # ── CSDO ─────────────────────────────────
+    CsdoTransferRequest:
+      type: object
+      required: [createdBy]
+      properties:
+        requireGenerateCdo: { type: boolean, default: false }
+        shippingMode: { type: string, example: COURIER }
+        transporter: { type: string, example: JNE }
+        createdBy: { type: string, example: user01 }
+
+    CsdoResponse:
+      type: object
+      properties:
+        id: { type: string }
+        docNo: { type: string, example: CSDO-2024-001 }
+        csoId: { type: string }
+        csoDocNo: { type: string }
+        company: { type: string }
+        store: { type: string }
+        customerCode: { type: string }
+        customerBranch: { type: string }
+        customerEmail: { type: string }
+        requireGenerateCdo: { type: boolean }
+        shippingMode: { type: string }
+        transporter: { type: string }
+        status:
+          type: string
+          enum: [HELD, RELEASED, REVERSED]
+        createdBy: { type: string }
+        releasedAt: { type: string, format: date-time }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CsdoResponseDetail'
+
+    CsdoResponseDetail:
+      type: object
+      properties:
+        id: { type: string }
+        itemCode: { type: string }
+        qty: { type: number }
+        uom: { type: string }
+
+    # ── CSR ──────────────────────────────────
+    CsrRequest:
+      type: object
+      required: [company, store, supplierCode, supplierContract, createdBy, items]
+      properties:
+        company: { type: string, example: COMP01 }
+        store: { type: string, example: STORE01 }
+        supplierCode: { type: string, example: SUPP001 }
+        supplierContract: { type: string, example: CONTRACT-2024-001 }
+        internalSupplierStore: { type: string }
+        supplierConfirmNote: { type: string }
+        reasonCode: { type: string, example: DEFECTIVE }
+        remark: { type: string }
+        createdBy: { type: string, example: user01 }
+        referenceNo: { type: string }
+        items:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/CsrDetailRequest'
+
+    CsrDetailRequest:
+      type: object
+      required: [itemCode, uom, qty]
+      properties:
+        itemCode: { type: string, example: ITEM001 }
+        uom: { type: string, example: PCS }
+        qty: { type: number, minimum: 0.0001, example: 10 }
+        actualQty: { type: number, minimum: 0 }
+
+    CsrActualQtyUpdateRequest:
+      type: object
+      required: [actualQty]
+      properties:
+        actualQty: { type: number, minimum: 0, example: 9 }
+
+    CsrResponse:
+      type: object
+      properties:
+        id: { type: string }
+        docNo: { type: string, example: CSR-2024-001 }
+        company: { type: string }
+        store: { type: string }
+        supplierCode: { type: string }
+        supplierContract: { type: string }
+        internalSupplierStore: { type: string }
+        supplierConfirmNote: { type: string }
+        reasonCode: { type: string }
+        remark: { type: string }
+        status:
+          type: string
+          enum: [HELD, RELEASED, COMPLETED]
+        createdBy: { type: string }
+        referenceNo: { type: string }
+        releasedAt: { type: string, format: date-time }
+        completedAt: { type: string, format: date-time }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CsrResponseDetail'
+
+    CsrResponseDetail:
+      type: object
+      properties:
+        id: { type: string }
+        itemCode: { type: string }
+        uom: { type: string }
+        qty: { type: number }
+        actualQty: { type: number }
+
+    # ── CSA ──────────────────────────────────
+    CsaRequest:
+      type: object
+      required: [company, store, transactionType, createdBy, items]
+      properties:
+        company: { type: string, example: COMP01 }
+        store: { type: string, example: STORE01 }
+        supplierCode: { type: string }
+        supplierContract: { type: string }
+        transactionType:
+          type: string
+          enum: [ADJ_IN, ADJ_OUT]
+          example: ADJ_IN
+        referenceNo: { type: string }
+        reasonCode: { type: string, example: STOCK_COUNT }
+        remark: { type: string }
+        createFrom: { type: string }
+        createdBy: { type: string, example: user01 }
+        items:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/CsaDetailRequest'
+
+    CsaDetailRequest:
+      type: object
+      required: [itemCode, qty, uom, settlementDecision]
+      properties:
+        itemCode: { type: string, example: ITEM001 }
+        itemName: { type: string }
+        qty: { type: number, minimum: 0.0001, example: 5 }
+        uom: { type: string, example: PCS }
+        settlementDecision:
+          type: string
+          enum: [INCLUDE_IN_SETTLEMENT, EXCLUDE_FROM_SETTLEMENT]
+          example: INCLUDE_IN_SETTLEMENT
+
+    CsaResponse:
+      type: object
+      properties:
+        id: { type: string }
+        docNo: { type: string, example: CSA-2024-001 }
+        company: { type: string }
+        store: { type: string }
+        supplierCode: { type: string }
+        supplierContract: { type: string }
+        transactionType: { type: string }
+        referenceNo: { type: string }
+        reasonCode: { type: string }
+        remark: { type: string }
+        createFrom: { type: string }
+        status:
+          type: string
+          enum: [HELD, RELEASED]
+        createdBy: { type: string }
+        releasedAt: { type: string, format: date-time }
+        releasedBy: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CsaResponseDetail'
+
+    CsaResponseDetail:
+      type: object
+      properties:
+        id: { type: string }
+        itemCode: { type: string }
+        itemName: { type: string }
+        qty: { type: number }
+        uom: { type: string }
+        settlementDecision: { type: string }
+
+    # ── Settlement ────────────────────────────
+    SettlementRequest:
+      type: object
+      properties:
+        company: { type: string, example: COMP01 }
+        store: { type: string, example: STORE01 }
+        settlementType:
+          type: string
+          enum: [CUSTOMER, SUPPLIER]
+          example: CUSTOMER
+        customerCode: { type: string }
+        supplierCode: { type: string }
+        supplierContract: { type: string }
+        currency: { type: string, default: IDR, example: IDR }
+        createdBy: { type: string, example: user01 }
+        referenceNo: { type: string }
+        remark: { type: string }
+
+    SettlementBatchGenerateRequest:
+      type: object
+      required: [company, store, settlementType, createdBy]
+      properties:
+        company: { type: string, example: COMP01 }
+        store: { type: string, example: STORE01 }
+        settlementType:
+          type: string
+          enum: [CUSTOMER, SUPPLIER]
+        customerCode: { type: string }
+        supplierCode: { type: string }
+        supplierContract: { type: string }
+        currency: { type: string, default: IDR }
+        createdBy: { type: string, example: settlement-batch-job }
+        fromDate: { type: string, format: date }
+        toDate: { type: string, format: date }
+        defaultUnitPrice: { type: number, minimum: 0, default: 0 }
+        referenceNo: { type: string }
+
+    SettlementDocumentPostRequest:
+      type: object
+      required: [documents]
+      properties:
+        documents:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/SettlementDocumentSource'
+
+    SettlementDocumentSource:
+      type: object
+      required: [documentType, documentId]
+      properties:
+        documentType:
+          type: string
+          enum: [CSO, CSRV, CSR, CSDO]
+          example: CSO
+        documentId: { type: string }
+        unitPrice: { type: number, minimum: 0 }
+        remark: { type: string }
+
+    SettlementResponse:
+      type: object
+      properties:
+        id: { type: string }
+        docNo: { type: string, example: SETT-2024-001 }
+        company: { type: string }
+        store: { type: string }
+        settlementType: { type: string }
+        customerCode: { type: string }
+        supplierCode: { type: string }
+        supplierContract: { type: string }
+        totalAmount: { type: number, example: 7500000 }
+        currency: { type: string }
+        status:
+          type: string
+          enum: [HELD, READY_FOR_BILLING, BILLED, SETTLED]
+        createdBy: { type: string }
+        referenceNo: { type: string }
+        remark: { type: string }
+        readyForBillingAt: { type: string, format: date-time }
+        billedAt: { type: string, format: date-time }
+        settledAt: { type: string, format: date-time }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        details:
+          type: array
+          items:
+            $ref: '#/components/schemas/SettlementDetailResponse'
+
+    SettlementDetailResponse:
+      type: object
+      properties:
+        id: { type: string }
+        documentType: { type: string }
+        documentNo: { type: string }
+        itemCode: { type: string }
+        qty: { type: number }
+        uom: { type: string }
+        unitPrice: { type: number }
+        lineAmount: { type: number }
+        remark: { type: string }
+        createdAt: { type: string, format: date-time }
+
+    # ── Reports ───────────────────────────────
+    ReportRow:
+      type: object
+      description: Generic report row — fields vary per report type
+      additionalProperties: true
+
+    StockSummaryRow:
+      type: object
+      properties:
+        store: { type: string }
+        sku: { type: string }
+        supplierCode: { type: string }
+        supplierContract: { type: string }
+        purchaseQty: { type: number }
+        closingQty: { type: number }
+        unbillQty: { type: number }
+        periodDate: { type: string, format: date }
+
+    CustomerInventoryRow:
+      type: object
+      properties:
+        issueFromStore: { type: string }
+        customerCode: { type: string }
+        branchCode: { type: string }
+        sku: { type: string }
+        qty: { type: number }
+
+    # ── Email ─────────────────────────────────
+    EmailRequest:
+      type: object
+      required: [to, subject, template]
+      properties:
+        to: { type: string, format: email, example: customer@example.com }
+        subject: { type: string, example: Your order has been delivered }
+        template: { type: string, example: csdo-notification }
+        variables:
+          type: object
+          additionalProperties: true
+
+    # ── Inventory ─────────────────────────────
+    AvailabilityResponse:
+      type: object
+      properties:
+        sku: { type: string, example: ITEM001 }
+        availableQty: { type: integer, example: 250 }

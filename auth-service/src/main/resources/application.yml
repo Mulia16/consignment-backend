@@ -8,9 +8,13 @@ spring:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/consignment_db}
     username: ${DB_USERNAME:postgres}
     password: ${DB_PASSWORD:postgres}
+  sql:
+    init:
+      mode: always
+      continue-on-error: true
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     show-sql: false
 
 jwt:
