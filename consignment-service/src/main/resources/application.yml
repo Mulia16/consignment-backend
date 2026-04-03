@@ -16,8 +16,13 @@ spring:
       uri: ${MONGODB_URI:mongodb://localhost:27017/consignment_logs}
   sql:
     init:
-      mode: always
-      continue-on-error: true
+      mode: never  # digantikan oleh Flyway
+
+flyway:
+  enabled: true
+  locations: classpath:db/migration
+  baseline-on-migrate: true
+  baseline-version: 0
 
 spring.cloud.aws:
   region:
