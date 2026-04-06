@@ -38,6 +38,10 @@ public class JwtUtil {
                 .parseSignedClaims(token).getPayload().getSubject();
     }
 
+    public long getExpirationMs() {
+        return expirationMs;
+    }
+
     public boolean validateToken(String token) {
         try {
             Jwts.parser().verifyWith(key()).build().parseSignedClaims(token);

@@ -3,7 +3,6 @@ package com.consignment.gateway.filter;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
-import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
@@ -17,17 +16,19 @@ public class CorrelationIdGlobalFilter implements GlobalFilter, Ordered {
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
-        String correlationId = exchange.getRequest().getHeaders().getFirst(CORRELATION_ID_HEADER);
-        if (correlationId == null || correlationId.isBlank()) {
-            correlationId = UUID.randomUUID().toString();
+        if (exchange.getRequest().getHeaders().containsKey(CORRELATION_ID_HEADER)) {
+            return chain.filter(exchange);
         }
 
-        ServerHttpRequest request = exchange.getRequest().mutate()
-                .header(CORRELATION_ID_HEADER, correlationId)
-                .build();
-
-        exchange.getResponse().getHeaders().set(CORRELATION_ID_HEADER, correlationId);
-        return chain.filter(exchange.mutate().request(request).build());
+        String correlationId = UUID.randomUUID().toString();
+        try {
+            ServerWebExchange mutated = exchange.mutate()
+                    .request(r -> r.header(CORRELATION_ID_HEADER, correlationId))
+                    .build();
+            return chain.filter(mutated);
+        } catch (UnsupportedOperationException e) {
+            return chain.filter(exchange);
+        }
     }
 
     @Override

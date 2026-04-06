@@ -10,7 +10,7 @@ spring:
     password: ${DB_PASSWORD:postgres}
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: none
   batch:
     job:
       enabled: false
@@ -18,13 +18,15 @@ spring:
       initialize-schema: never
   sql:
     init:
-      mode: never  # digantikan oleh Flyway
-
-flyway:
-  enabled: true
-  locations: classpath:db/migration
-  baseline-on-migrate: true
-  baseline-version: 0
+      mode: never
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    baseline-version: 0
+    validate-on-migrate: false
+    repair-on-migrate: true
+    table: flyway_schema_history_batch
 
 eureka:
   client:

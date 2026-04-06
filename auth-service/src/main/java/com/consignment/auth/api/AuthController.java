@@ -5,10 +5,13 @@ import com.consignment.auth.repository.UserRepository;
 import com.consignment.auth.security.JwtUtil;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
@@ -35,13 +38,27 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
-        Authentication auth = authManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.username(), request.password()));
-        UserDetails userDetails = (UserDetails) auth.getPrincipal();
-        Set<String> roles = userDetails.getAuthorities().stream()
-                .map(a -> a.getAuthority()).collect(java.util.stream.Collectors.toSet());
-        String token = jwtUtil.generateToken(userDetails.getUsername(), roles);
-        return ResponseEntity.ok(Map.of("token", token));
+        try {
+            Authentication auth = authManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(request.username(), request.password()));
+            UserDetails userDetails = (UserDetails) auth.getPrincipal();
+            Set<String> roles = userDetails.getAuthorities().stream()
+                    .map(a -> a.getAuthority()).collect(java.util.stream.Collectors.toSet());
+            String token = jwtUtil.generateToken(userDetails.getUsername(), roles);
+            return ResponseEntity.ok(Map.of(
+                    "token", token,
+                    "token_type", "Bearer",
+                    "expires_in", jwtUtil.getExpirationMs() / 1000,
+                    "username", userDetails.getUsername(),
+                    "roles", roles
+            ));
+        } catch (DisabledException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "Account is disabled"));
+        } catch (AuthenticationException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "Invalid username or password"));
+        }
     }
 
     @PostMapping("/register")

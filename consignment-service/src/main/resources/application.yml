@@ -16,22 +16,24 @@ spring:
       uri: ${MONGODB_URI:mongodb://localhost:27017/consignment_logs}
   sql:
     init:
-      mode: never  # digantikan oleh Flyway
-
-flyway:
-  enabled: true
-  locations: classpath:db/migration
-  baseline-on-migrate: true
-  baseline-version: 0
-
-spring.cloud.aws:
-  region:
-    static: ${AWS_REGION:ap-southeast-1}
-  credentials:
-    access-key: ${AWS_ACCESS_KEY_ID:local}
-    secret-key: ${AWS_SECRET_ACCESS_KEY:local}
-  sqs:
-    enabled: ${QUEUE_ENABLED:false}
+      mode: never
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    baseline-version: 0
+    validate-on-migrate: false
+    repair-on-migrate: true
+    table: flyway_schema_history_consignment
+  cloud:
+    aws:
+      region:
+        static: ${AWS_REGION:ap-southeast-1}
+      credentials:
+        access-key: ${AWS_ACCESS_KEY_ID:local}
+        secret-key: ${AWS_SECRET_ACCESS_KEY:local}
+      sqs:
+        enabled: ${QUEUE_ENABLED:false}
 
 mybatis:
   mapper-locations: classpath*:mapper/*.xml
@@ -42,7 +44,7 @@ mybatis:
 eureka:
   client:
     service-url:
-      defaultZone: http://localhost:8761/eureka
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8761/eureka}
 
 management:
   endpoints:
