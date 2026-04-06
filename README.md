@@ -41,6 +41,9 @@ Semua service harus berstatus `healthy` sebelum bisa digunakan.
 
 Semua request melalui API Gateway di `http://localhost:8080`.
 
+> Catatan routing: gateway strip prefix pertama untuk `consignment` dan `inventory`.
+> Contoh: `/consignment/api/...` → diteruskan ke consignment-service sebagai `/api/...`
+
 ### Login
 
 ```bash
