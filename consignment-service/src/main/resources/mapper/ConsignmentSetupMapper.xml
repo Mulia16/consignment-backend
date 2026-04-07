@@ -34,6 +34,43 @@
         ORDER BY item_code
     </select>
 
+    <sql id="itemSetupFilterWhere">
+        WHERE s.deleted_flag = FALSE
+        <if test="criteria.itemCode != null and criteria.itemCode != ''">
+            AND s.item_code ILIKE CONCAT('%', #{criteria.itemCode}, '%')
+        </if>
+        <if test="criteria.itemName != null and criteria.itemName != ''">
+            AND s.item_name ILIKE CONCAT('%', #{criteria.itemName}, '%')
+        </if>
+        <if test="criteria.variant != null and criteria.variant != ''">
+            AND s.variant ILIKE CONCAT('%', #{criteria.variant}, '%')
+        </if>
+        <if test="criteria.hierarchy != null and criteria.hierarchy != ''">
+            AND s.hierarchy = #{criteria.hierarchy}
+        </if>
+        <if test="criteria.categoryL1 != null and criteria.categoryL1 != ''">
+            AND s.category_l1 = #{criteria.categoryL1}
+        </if>
+        <if test="criteria.categoryL2 != null and criteria.categoryL2 != ''">
+            AND s.category_l2 = #{criteria.categoryL2}
+        </if>
+    </sql>
+
+    <select id="searchItems" resultMap="com.consignment.service.persistence.mapper.ItemSetupMapper.ItemSetupResultMap">
+        SELECT s.id, s.item_code, s.item_name, s.variant, s.hierarchy, s.item_model,
+               s.unit_retail, s.mvc, s.category_l1, s.category_l2, s.category_l3,
+               s.sync_flag, s.deleted_flag, s.created_at, s.updated_at
+        FROM consignment_item_setup s
+        <include refid="itemSetupFilterWhere"/>
+        ORDER BY s.item_code ASC
+        LIMIT #{criteria.perPage} OFFSET #{criteria.offset}
+    </select>
+
+    <select id="countItems" resultType="long">
+        SELECT COUNT(*) FROM consignment_item_setup s
+        <include refid="itemSetupFilterWhere"/>
+    </select>
+
     <select id="findExternalByItemCode" resultMap="ExternalSupplierResultMap">
         SELECT id, item_code, supplier_code, supplier_type, supplier_contract, consignee_company,
                consignee_store, current_inventory_qty, created_at, updated_at

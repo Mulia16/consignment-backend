@@ -1,21 +1,14 @@
 package com.consignment.service.api;
 
+import com.consignment.service.model.ApiResponse;
 import com.consignment.service.model.cso.CsoRequest;
 import com.consignment.service.model.cso.CsoResponse;
 import com.consignment.service.model.cso.CsoSearchCriteria;
 import com.consignment.service.service.CsoService;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -30,7 +23,8 @@ public class CsoController {
     }
 
     @GetMapping("/api/cso")
-    public List<CsoResponse> search(
+    public ResponseEntity<ApiResponse<List<CsoResponse>>> search(
+            @RequestParam(required = false) String docNo,
             @RequestParam(required = false) String company,
             @RequestParam(required = false) String store,
             @RequestParam(required = false) String customerCode,
@@ -39,47 +33,41 @@ public class CsoController {
             @RequestParam(required = false) String createdMethod,
             @RequestParam(required = false) String referenceNo,
             @RequestParam(required = false) String itemCode,
-            @RequestParam(required = false) String status
-    ) {
-        return csoService.search(new CsoSearchCriteria(
-                company,
-                store,
-                customerCode,
-                supplierCode,
-                supplierContract,
-                createdMethod,
-                referenceNo,
-                itemCode,
-                status
-        ));
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String createdBy,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int perPage) {
+        var result = csoService.search(new CsoSearchCriteria(docNo, company, store, customerCode, supplierCode, supplierContract, createdMethod, referenceNo, itemCode, status, createdBy, page, perPage));
+        return ResponseEntity.ok(ApiResponse.paginated(result.items(), result.meta()));
     }
 
     @PostMapping("/api/cso")
-    public CsoResponse create(@Valid @RequestBody CsoRequest request) {
-        return csoService.create(request);
+    public ResponseEntity<ApiResponse<CsoResponse>> create(@Valid @RequestBody CsoRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success("CSO created", csoService.create(request)));
     }
 
     @GetMapping("/api/cso/{id}")
-    public CsoResponse getById(@PathVariable String id) {
-        return csoService.getById(id);
+    public ResponseEntity<ApiResponse<CsoResponse>> getById(@PathVariable String id) {
+        return ResponseEntity.ok(ApiResponse.success(csoService.getById(id)));
     }
 
     @PutMapping("/api/cso/{id}/release")
-    public CsoResponse release(
+    public ResponseEntity<ApiResponse<CsoResponse>> release(
             @PathVariable String id,
-            @RequestHeader(value = "X-User", required = false) String releasedBy
-    ) {
-        return csoService.release(id, releasedBy);
+            @RequestHeader(value = "X-User", required = false) String releasedBy) {
+        return ResponseEntity.ok(ApiResponse.success(csoService.release(id, releasedBy)));
     }
 
     @DeleteMapping("/api/cso/{id}")
-    public ResponseEntity<Void> delete(@PathVariable String id) {
+    public ResponseEntity<ApiResponse<Void>> delete(@PathVariable String id) {
         csoService.delete(id);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(ApiResponse.ok("CSO deleted", null));
     }
 
     @PostMapping("/api/acmm/cso/auto-create")
-    public CsoResponse autoCreate(@Valid @RequestBody CsoRequest request) {
-        return csoService.autoCreate(request);
+    public ResponseEntity<ApiResponse<CsoResponse>> autoCreate(@Valid @RequestBody CsoRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success("CSO auto-created", csoService.autoCreate(request)));
     }
 }

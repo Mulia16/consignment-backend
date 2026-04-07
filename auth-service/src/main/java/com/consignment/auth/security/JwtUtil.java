@@ -9,6 +9,7 @@ import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.Set;
+import java.util.UUID;
 
 @Component
 public class JwtUtil {
@@ -25,6 +26,7 @@ public class JwtUtil {
 
     public String generateToken(String username, Set<String> roles) {
         return Jwts.builder()
+                .id(UUID.randomUUID().toString())   // jti — unique per token
                 .subject(username)
                 .claim("roles", roles)
                 .issuedAt(new Date())
@@ -34,8 +36,15 @@ public class JwtUtil {
     }
 
     public String extractUsername(String token) {
-        return Jwts.parser().verifyWith(key()).build()
-                .parseSignedClaims(token).getPayload().getSubject();
+        return parseClaims(token).getSubject();
+    }
+
+    public String extractJti(String token) {
+        return parseClaims(token).getId();
+    }
+
+    public Date extractExpiration(String token) {
+        return parseClaims(token).getExpiration();
     }
 
     public long getExpirationMs() {
@@ -44,10 +53,15 @@ public class JwtUtil {
 
     public boolean validateToken(String token) {
         try {
-            Jwts.parser().verifyWith(key()).build().parseSignedClaims(token);
+            parseClaims(token);
             return true;
         } catch (JwtException e) {
             return false;
         }
+    }
+
+    private Claims parseClaims(String token) {
+        return Jwts.parser().verifyWith(key()).build()
+                .parseSignedClaims(token).getPayload();
     }
 }

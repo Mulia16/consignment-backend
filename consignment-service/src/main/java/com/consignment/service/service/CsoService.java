@@ -2,6 +2,7 @@ package com.consignment.service.service;
 
 import com.consignment.service.exception.BusinessRuleViolationException;
 import com.consignment.service.exception.ResourceNotFoundException;
+import com.consignment.service.model.PageMeta;
 import com.consignment.service.model.csdo.CsdoTransferRequest;
 import com.consignment.service.model.cso.CsoDetailRequest;
 import com.consignment.service.model.cso.CsoRequest;
@@ -68,20 +69,14 @@ public class CsoService {
         return getById(header.getId());
     }
 
-    public List<CsoResponse> search(CsoSearchCriteria criteria) {
-        return csoMapper.searchHeaders(
-                        normalize(criteria.company()),
-                        normalize(criteria.store()),
-                        normalize(criteria.customerCode()),
-                        normalize(criteria.supplierCode()),
-                        normalize(criteria.supplierContract()),
-                        normalize(criteria.createdMethod()),
-                        normalize(criteria.referenceNo()),
-                        normalize(criteria.itemCode()),
-                        normalize(criteria.status())
-                ).stream()
-                .map(header -> toResponse(header, csoMapper.findDetailsByHeaderId(header.getId())))
+    public record PagedResult(List<CsoResponse> items, PageMeta meta) {}
+
+    public PagedResult search(CsoSearchCriteria criteria) {
+        List<CsoResponse> items = csoMapper.searchHeaders(criteria).stream()
+                .map(h -> toResponse(h, csoMapper.findDetailsByHeaderId(h.getId())))
                 .toList();
+        long total = csoMapper.countHeaders(criteria);
+        return new PagedResult(items, PageMeta.of(criteria.page(), criteria.perPage(), total));
     }
 
     public CsoResponse getById(String id) {

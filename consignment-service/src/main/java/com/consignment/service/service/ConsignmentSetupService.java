@@ -2,11 +2,8 @@ package com.consignment.service.service;
 
 import com.consignment.service.exception.BusinessRuleViolationException;
 import com.consignment.service.exception.ResourceNotFoundException;
-import com.consignment.service.model.setup.ConsignmentSetupItemResponse;
-import com.consignment.service.model.setup.ExternalSupplierSetupRequest;
-import com.consignment.service.model.setup.ExternalSupplierSetupResponse;
-import com.consignment.service.model.setup.InternalSupplierSetupRequest;
-import com.consignment.service.model.setup.InternalSupplierSetupResponse;
+import com.consignment.service.model.PageMeta;
+import com.consignment.service.model.setup.*;
 import com.consignment.service.persistence.mapper.ConsignmentSetupMapper;
 import com.consignment.service.persistence.mapper.InventoryValidationMapper;
 import com.consignment.service.persistence.mapper.ItemSetupMapper;
@@ -29,33 +26,63 @@ public class ConsignmentSetupService {
     private final ConsignmentSetupMapper consignmentSetupMapper;
     private final InventoryValidationMapper inventoryValidationMapper;
 
-    public ConsignmentSetupService(
-            ItemSetupMapper itemSetupMapper,
-            ConsignmentSetupMapper consignmentSetupMapper,
-            InventoryValidationMapper inventoryValidationMapper
-    ) {
+    public ConsignmentSetupService(ItemSetupMapper itemSetupMapper,
+                                   ConsignmentSetupMapper consignmentSetupMapper,
+                                   InventoryValidationMapper inventoryValidationMapper) {
         this.itemSetupMapper = itemSetupMapper;
         this.consignmentSetupMapper = consignmentSetupMapper;
         this.inventoryValidationMapper = inventoryValidationMapper;
     }
 
-    public List<ConsignmentSetupItemResponse> listItems() {
-        return consignmentSetupMapper.findItemCodesWithSetup().stream()
-                .map(this::getByItemCode)
+    // ── List with filter + pagination ──────────────────────────────────────────
+
+    public record PagedItems(List<ConsignmentSetupItemResponse> items, PageMeta meta) {}
+
+    public PagedItems listItems(ItemSetupSearchCriteria criteria) {
+        List<ItemSetupEntity> entities = consignmentSetupMapper.searchItems(criteria);
+        long total = consignmentSetupMapper.countItems(criteria);
+        List<ConsignmentSetupItemResponse> items = entities.stream()
+                .map(e -> toResponse(e,
+                        consignmentSetupMapper.findExternalByItemCode(e.getItemCode()),
+                        consignmentSetupMapper.findInternalByItemCode(e.getItemCode())))
                 .toList();
+        return new PagedItems(items, PageMeta.of(criteria.page(), criteria.perPage(), total));
     }
+
+    // ── Single item ────────────────────────────────────────────────────────────
 
     public ConsignmentSetupItemResponse getByItemCode(String itemCode) {
         ItemSetupEntity itemSetup = itemSetupMapper.findByItemCode(itemCode);
-        List<ExternalSupplierEntity> externalSuppliers = consignmentSetupMapper.findExternalByItemCode(itemCode);
-        List<InternalSupplierEntity> internalSuppliers = consignmentSetupMapper.findInternalByItemCode(itemCode);
-
-        if (itemSetup == null && externalSuppliers.isEmpty() && internalSuppliers.isEmpty()) {
+        List<ExternalSupplierEntity> ext = consignmentSetupMapper.findExternalByItemCode(itemCode);
+        List<InternalSupplierEntity> intl = consignmentSetupMapper.findInternalByItemCode(itemCode);
+        if (itemSetup == null && ext.isEmpty() && intl.isEmpty()) {
             throw new ResourceNotFoundException("Consignment setup not found for item: " + itemCode);
         }
-
-        return toResponse(itemCode, externalSuppliers, internalSuppliers);
+        return toResponse(itemSetup, ext, intl);
     }
+
+    // ── Create / Update item setup ─────────────────────────────────────────────
+
+    @Transactional
+    public ConsignmentSetupItemResponse createOrUpdateItem(ItemSetupRequest request) {
+        ItemSetupEntity entity = new ItemSetupEntity();
+        entity.setItemCode(request.itemCode());
+        entity.setItemName(request.itemName());
+        entity.setVariant(request.variant());
+        entity.setHierarchy(request.hierarchy());
+        entity.setItemModel(request.itemModel());
+        entity.setUnitRetail(request.unitRetail());
+        entity.setMvc(request.mvc());
+        entity.setCategoryL1(request.categoryL1());
+        entity.setCategoryL2(request.categoryL2());
+        entity.setCategoryL3(request.categoryL3());
+        entity.setSyncFlag(true);
+        entity.setDeletedFlag(false);
+        itemSetupMapper.upsert(entity);
+        return getByItemCode(request.itemCode());
+    }
+
+    // ── External supplier ──────────────────────────────────────────────────────
 
     @Transactional
     public ExternalSupplierSetupResponse addExternalSupplier(String itemCode, ExternalSupplierSetupRequest request) {
@@ -75,26 +102,17 @@ public class ConsignmentSetupService {
         entity.setConsigneeStore(request.consigneeStore());
         entity.setCurrentInventoryQty(request.currentInventoryQty());
         consignmentSetupMapper.insertExternal(entity);
-
-        ExternalSupplierEntity saved = consignmentSetupMapper.findExternalById(itemCode, entity.getId());
-        return toExternalResponse(saved);
+        return toExternalResponse(consignmentSetupMapper.findExternalById(itemCode, entity.getId()));
     }
 
     @Transactional
-    public ExternalSupplierSetupResponse updateExternalSupplier(
-            String itemCode,
-            String id,
-            ExternalSupplierSetupRequest request
-    ) {
+    public ExternalSupplierSetupResponse updateExternalSupplier(String itemCode, String id, ExternalSupplierSetupRequest request) {
         ensureItemExists(itemCode);
         ExternalSupplierEntity existing = consignmentSetupMapper.findExternalById(itemCode, id);
-        if (existing == null) {
-            throw new ResourceNotFoundException("External supplier setup not found: " + id);
-        }
+        if (existing == null) throw new ResourceNotFoundException("External supplier setup not found: " + id);
         if (inventoryValidationMapper.countBlockingInventory(itemCode, existing.getConsigneeStore()) > 0) {
-            throw new BusinessRuleViolationException("External supplier setup cannot be updated while related inventory is not zero");
+            throw new BusinessRuleViolationException("Cannot update while related inventory is not zero");
         }
-
         ensureExternalSupplierType(request.supplierType());
         ensureItemAllowsExternal(itemCode);
         ensureOneStoreOneSupplier(itemCode, request.consigneeStore(), request.supplierCode(), id);
@@ -106,7 +124,6 @@ public class ConsignmentSetupService {
         existing.setConsigneeCompany(request.consigneeCompany());
         existing.setConsigneeStore(request.consigneeStore());
         existing.setCurrentInventoryQty(request.currentInventoryQty());
-
         consignmentSetupMapper.updateExternal(existing);
         return toExternalResponse(consignmentSetupMapper.findExternalById(itemCode, id));
     }
@@ -114,20 +131,18 @@ public class ConsignmentSetupService {
     @Transactional
     public void deleteExternalSupplier(String itemCode, String id) {
         ExternalSupplierEntity existing = consignmentSetupMapper.findExternalById(itemCode, id);
-        if (existing == null) {
-            throw new ResourceNotFoundException("External supplier setup not found: " + id);
-        }
+        if (existing == null) throw new ResourceNotFoundException("External supplier setup not found: " + id);
         if (inventoryValidationMapper.countBlockingInventory(itemCode, existing.getConsigneeStore()) > 0) {
-            throw new BusinessRuleViolationException("External supplier setup cannot be deleted while related inventory is not zero");
+            throw new BusinessRuleViolationException("Cannot delete while related inventory is not zero");
         }
         consignmentSetupMapper.deleteExternal(itemCode, id);
     }
 
+    // ── Internal supplier ──────────────────────────────────────────────────────
+
     @Transactional
     public InternalSupplierSetupResponse addInternalSupplier(String itemCode, InternalSupplierSetupRequest request) {
         ensureItemExists(itemCode);
-        ensureOneStoreOneSupplier(itemCode, request.supplierStore(), request.supplierCode());
-        ensureNotUsedByExternal(itemCode, request.supplierStore());
         ensureInternalHierarchy(itemCode, request.supplierStore());
 
         InternalSupplierEntity entity = new InternalSupplierEntity();
@@ -140,19 +155,20 @@ public class ConsignmentSetupService {
         consignmentSetupMapper.insertInternal(entity);
 
         return consignmentSetupMapper.findInternalByItemCode(itemCode).stream()
-                .filter(internal -> entity.getId().equals(internal.getId()))
-                .findFirst()
-                .map(this::toInternalResponse)
-                .orElseThrow(() -> new ResourceNotFoundException("Internal supplier setup not found after insert: " + entity.getId()));
+                .filter(i -> entity.getId().equals(i.getId()))
+                .findFirst().map(this::toInternalResponse)
+                .orElseThrow(() -> new ResourceNotFoundException("Internal supplier not found after insert"));
     }
+
+    // ── Guards ─────────────────────────────────────────────────────────────────
 
     private void ensureItemExists(String itemCode) {
         itemSetupMapper.ensureExists(itemCode, DEFAULT_HIERARCHY);
     }
 
     private void ensureItemAllowsExternal(String itemCode) {
-        ItemSetupEntity itemSetupEntity = itemSetupMapper.findByItemCode(itemCode);
-        if (itemSetupEntity != null && OUTRIGHT_HIERARCHY.equalsIgnoreCase(itemSetupEntity.getHierarchy())) {
+        ItemSetupEntity e = itemSetupMapper.findByItemCode(itemCode);
+        if (e != null && OUTRIGHT_HIERARCHY.equalsIgnoreCase(e.getHierarchy())) {
             throw new BusinessRuleViolationException("Outright items cannot be assigned to external consignment supplier");
         }
     }
@@ -167,87 +183,71 @@ public class ConsignmentSetupService {
         ensureOneStoreOneSupplier(itemCode, storeCode, supplierCode, null);
     }
 
-    private void ensureOneStoreOneSupplier(String itemCode, String storeCode, String supplierCode, String externalIdToIgnore) {
-        consignmentSetupMapper.findExternalByItemCode(itemCode).forEach(external -> {
-            if (!external.getId().equals(externalIdToIgnore)
-                    && external.getConsigneeStore().equals(storeCode)
-                    && !external.getSupplierCode().equals(supplierCode)) {
+    private void ensureOneStoreOneSupplier(String itemCode, String storeCode, String supplierCode, String ignoreId) {
+        // untuk external: cek consigneeStore tidak dipakai supplier berbeda
+        consignmentSetupMapper.findExternalByItemCode(itemCode).forEach(e -> {
+            if (!e.getId().equals(ignoreId) && e.getConsigneeStore().equals(storeCode) && !e.getSupplierCode().equals(supplierCode)) {
                 throw new BusinessRuleViolationException("A store can only map to one supplier per item");
             }
         });
-
-        consignmentSetupMapper.findInternalByItemCode(itemCode).forEach(internal -> {
-            if (internal.getSupplierStore().equals(storeCode) && !internal.getSupplierCode().equals(supplierCode)) {
+        // untuk internal: cek supplierStore tidak dipakai supplier berbeda
+        consignmentSetupMapper.findInternalByItemCode(itemCode).forEach(i -> {
+            if (i.getSupplierStore().equals(storeCode) && !i.getSupplierCode().equals(supplierCode)) {
                 throw new BusinessRuleViolationException("A store can only map to one supplier per item");
             }
         });
     }
 
-    private void ensureNotUsedByInternal(String itemCode, String externalStore) {
-        boolean alreadyUsed = consignmentSetupMapper.findInternalByItemCode(itemCode).stream()
-                .anyMatch(internal -> internal.getSupplierStore().equals(externalStore));
-        if (alreadyUsed) {
-            throw new BusinessRuleViolationException(
-                    "Store already used in internal setup for this item"
-            );
+    private void ensureNotUsedByInternal(String itemCode, String store) {
+        if (consignmentSetupMapper.findInternalByItemCode(itemCode).stream().anyMatch(i -> i.getSupplierStore().equals(store))) {
+            throw new BusinessRuleViolationException("Store already used in internal setup for this item");
         }
     }
 
-    private void ensureNotUsedByExternal(String itemCode, String internalStore) {
-        boolean alreadyUsed = consignmentSetupMapper.findExternalByItemCode(itemCode).stream()
-                .anyMatch(external -> external.getConsigneeStore().equals(internalStore));
-        if (alreadyUsed) {
-            throw new BusinessRuleViolationException(
-                    "Store already used in external setup for this item"
-            );
+    private void ensureNotUsedByExternal(String itemCode, String store) {
+        if (consignmentSetupMapper.findExternalByItemCode(itemCode).stream().anyMatch(e -> e.getConsigneeStore().equals(store))) {
+            throw new BusinessRuleViolationException("Store already used in external setup for this item");
         }
     }
 
-    private void ensureInternalHierarchy(String itemCode, String internalSupplierStore) {
-        boolean existsInExternalHierarchy = consignmentSetupMapper.findExternalByItemCode(itemCode).stream()
-                .anyMatch(external -> external.getConsigneeStore().equals(internalSupplierStore));
-
-        if (!existsInExternalHierarchy) {
-            throw new BusinessRuleViolationException(
-                    "Internal supplier store must belong to external consignee hierarchy"
-            );
+    private void ensureInternalHierarchy(String itemCode, String supplierStore) {
+        if (consignmentSetupMapper.findExternalByItemCode(itemCode).stream().noneMatch(e -> e.getConsigneeStore().equals(supplierStore))) {
+            throw new BusinessRuleViolationException("Internal supplier store must belong to external consignee hierarchy");
         }
     }
 
-    private ConsignmentSetupItemResponse toResponse(
-            String itemCode,
-            List<ExternalSupplierEntity> externalSuppliers,
-            List<InternalSupplierEntity> internalSuppliers
-    ) {
+    // ── Mappers ────────────────────────────────────────────────────────────────
+
+    private ConsignmentSetupItemResponse toResponse(ItemSetupEntity item,
+                                                     List<ExternalSupplierEntity> ext,
+                                                     List<InternalSupplierEntity> intl) {
+        ConsignmentSetupItemResponse.CategoryHierarchy category = null;
+        if (item != null && (item.getCategoryL1() != null || item.getCategoryL2() != null || item.getCategoryL3() != null)) {
+            category = new ConsignmentSetupItemResponse.CategoryHierarchy(item.getCategoryL1(), item.getCategoryL2(), item.getCategoryL3());
+        }
+        String itemCode = item != null ? item.getItemCode() : (ext.isEmpty() ? "" : ext.get(0).getItemCode());
         return new ConsignmentSetupItemResponse(
                 itemCode,
-                externalSuppliers.stream().map(this::toExternalResponse).toList(),
-                internalSuppliers.stream().map(this::toInternalResponse).toList()
+                item != null ? item.getItemName() : null,
+                item != null ? item.getVariant() : null,
+                item != null ? item.getHierarchy() : null,
+                item != null ? item.getItemModel() : null,
+                item != null ? item.getUnitRetail() : null,
+                item != null ? item.getMvc() : null,
+                category,
+                ext.stream().map(this::toExternalResponse).toList(),
+                intl.stream().map(this::toInternalResponse).toList()
         );
     }
 
-    private ExternalSupplierSetupResponse toExternalResponse(ExternalSupplierEntity entry) {
-        return new ExternalSupplierSetupResponse(
-                entry.getId(),
-                entry.getSupplierCode(),
-                entry.getSupplierType(),
-                entry.getSupplierContract(),
-                entry.getConsigneeCompany(),
-                entry.getConsigneeStore(),
-                entry.getCurrentInventoryQty(),
-                entry.getCreatedAt(),
-                entry.getUpdatedAt()
-        );
+    private ExternalSupplierSetupResponse toExternalResponse(ExternalSupplierEntity e) {
+        return new ExternalSupplierSetupResponse(e.getId(), e.getSupplierCode(), e.getSupplierType(),
+                e.getSupplierContract(), e.getConsigneeCompany(), e.getConsigneeStore(),
+                e.getCurrentInventoryQty(), e.getCreatedAt(), e.getUpdatedAt());
     }
 
-    private InternalSupplierSetupResponse toInternalResponse(InternalSupplierEntity entry) {
-        return new InternalSupplierSetupResponse(
-                entry.getId(),
-                entry.getSupplierCode(),
-                entry.getSupplierStore(),
-                entry.getConsigneeCompany(),
-                entry.getConsigneeStore(),
-                entry.getCreatedAt()
-        );
+    private InternalSupplierSetupResponse toInternalResponse(InternalSupplierEntity e) {
+        return new InternalSupplierSetupResponse(e.getId(), e.getSupplierCode(), e.getSupplierStore(),
+                e.getConsigneeCompany(), e.getConsigneeStore(), e.getCreatedAt());
     }
 }

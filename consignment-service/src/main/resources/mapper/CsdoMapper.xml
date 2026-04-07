@@ -71,20 +71,34 @@
         ORDER BY created_at DESC
     </select>
 
-    <select id="searchHeaders" resultMap="CsdoHeaderResultMap">
+    <sql id="csdoFilterWhere">
+        <where>
+            <if test="c.docNo != null and c.docNo != ''">AND h.doc_no ILIKE CONCAT('%', #{c.docNo}, '%')</if>
+            <if test="c.company != null and c.company != ''">AND h.company = #{c.company}</if>
+            <if test="c.store != null and c.store != ''">AND h.store = #{c.store}</if>
+            <if test="c.customerCode != null and c.customerCode != ''">AND h.customer_code = #{c.customerCode}</if>
+            <if test="c.csoDocNo != null and c.csoDocNo != ''">AND h.cso_doc_no ILIKE CONCAT('%', #{c.csoDocNo}, '%')</if>
+            <if test="c.status != null and c.status != ''">AND h.status = #{c.status}</if>
+            <if test="c.createdBy != null and c.createdBy != ''">AND h.created_by = #{c.createdBy}</if>
+            <if test="c.itemCode != null and c.itemCode != ''">AND d.item_code = #{c.itemCode}</if>
+        </where>
+    </sql>
+
+    <select id="searchHeaders" parameterType="com.consignment.service.model.csdo.CsdoSearchCriteria" resultMap="CsdoHeaderResultMap">
         SELECT DISTINCT h.id, h.doc_no, h.cso_id, h.cso_doc_no, h.company, h.store, h.customer_code, h.customer_branch,
                h.customer_email, h.require_generate_cdo, h.shipping_mode, h.transporter, h.status,
                h.created_by, h.released_at, h.created_at, h.updated_at
         FROM csdo_header h
         LEFT JOIN csdo_detail d ON d.csdo_id = h.id
-        WHERE (#{company} IS NULL OR h.company = #{company})
-          AND (#{store} IS NULL OR h.store = #{store})
-          AND (#{customerCode} IS NULL OR h.customer_code = #{customerCode})
-          AND (#{createdMethod} IS NULL OR h.doc_no LIKE CONCAT(#{createdMethod}, '%'))
-          AND (#{referenceNo} IS NULL OR h.cso_doc_no = #{referenceNo})
-          AND (#{itemCode} IS NULL OR d.item_code = #{itemCode})
-          AND (#{status} IS NULL OR h.status = #{status})
+        <include refid="csdoFilterWhere"/>
         ORDER BY h.created_at DESC
+        LIMIT #{c.perPage} OFFSET #{c.offset}
+    </select>
+
+    <select id="countHeaders" parameterType="com.consignment.service.model.csdo.CsdoSearchCriteria" resultType="long">
+        SELECT COUNT(DISTINCT h.id) FROM csdo_header h
+        LEFT JOIN csdo_detail d ON d.csdo_id = h.id
+        <include refid="csdoFilterWhere"/>
     </select>
 
     <select id="findDetailsByHeaderId" resultMap="CsdoDetailResultMap">

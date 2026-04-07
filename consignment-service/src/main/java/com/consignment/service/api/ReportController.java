@@ -1,10 +1,13 @@
 package com.consignment.service.api;
 
+import com.consignment.service.model.ApiResponse;
+import com.consignment.service.model.PageMeta;
 import com.consignment.service.model.report.CustomerInventoryRow;
 import com.consignment.service.model.report.ReportRow;
 import com.consignment.service.model.report.StockSummaryRow;
 import com.consignment.service.service.ReportService;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -20,128 +23,116 @@ public class ReportController {
         this.reportService = reportService;
     }
 
-    /** R01 - CSRQ transactions by period */
     @GetMapping("/csrq")
-    public List<ReportRow> csrq(
-            @RequestParam(required = false) String company,
-            @RequestParam(required = false) String store,
+    public ResponseEntity<ApiResponse<List<ReportRow>>> csrq(
+            @RequestParam(required = false) String company, @RequestParam(required = false) String store,
             @RequestParam(required = false) String supplierCode,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
             @RequestParam(required = false) String status) {
-        return reportService.csrqReport(company, store, supplierCode, fromDate, toDate, status);
+        List<ReportRow> data = reportService.csrqReport(company, store, supplierCode, fromDate, toDate, status);
+        return ResponseEntity.ok(ApiResponse.paginated(data, PageMeta.of(1, data.size(), data.size())));
     }
 
-    /** R02 - CSRV transactions by period */
     @GetMapping("/csrv")
-    public List<ReportRow> csrv(
-            @RequestParam(required = false) String company,
-            @RequestParam(required = false) String store,
+    public ResponseEntity<ApiResponse<List<ReportRow>>> csrv(
+            @RequestParam(required = false) String company, @RequestParam(required = false) String store,
             @RequestParam(required = false) String supplierCode,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
             @RequestParam(required = false) String status) {
-        return reportService.csrvReport(company, store, supplierCode, fromDate, toDate, status);
+        List<ReportRow> data = reportService.csrvReport(company, store, supplierCode, fromDate, toDate, status);
+        return ResponseEntity.ok(ApiResponse.paginated(data, PageMeta.of(1, data.size(), data.size())));
     }
 
-    /** R03 - CSO transactions by period */
     @GetMapping("/cso")
-    public List<ReportRow> cso(
-            @RequestParam(required = false) String company,
-            @RequestParam(required = false) String store,
+    public ResponseEntity<ApiResponse<List<ReportRow>>> cso(
+            @RequestParam(required = false) String company, @RequestParam(required = false) String store,
             @RequestParam(required = false) String customerCode,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
             @RequestParam(required = false) String status) {
-        return reportService.csoReport(company, store, customerCode, fromDate, toDate, status);
+        List<ReportRow> data = reportService.csoReport(company, store, customerCode, fromDate, toDate, status);
+        return ResponseEntity.ok(ApiResponse.paginated(data, PageMeta.of(1, data.size(), data.size())));
     }
 
-    /** R04 - CSDO transactions by period */
     @GetMapping("/csdo")
-    public List<ReportRow> csdo(
-            @RequestParam(required = false) String company,
-            @RequestParam(required = false) String store,
+    public ResponseEntity<ApiResponse<List<ReportRow>>> csdo(
+            @RequestParam(required = false) String company, @RequestParam(required = false) String store,
             @RequestParam(required = false) String customerCode,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
             @RequestParam(required = false) String status) {
-        return reportService.csdoReport(company, store, customerCode, fromDate, toDate, status);
+        List<ReportRow> data = reportService.csdoReport(company, store, customerCode, fromDate, toDate, status);
+        return ResponseEntity.ok(ApiResponse.paginated(data, PageMeta.of(1, data.size(), data.size())));
     }
 
-    /** R05 - CSR transactions by period */
     @GetMapping("/csr")
-    public List<ReportRow> csr(
-            @RequestParam(required = false) String company,
-            @RequestParam(required = false) String store,
+    public ResponseEntity<ApiResponse<List<ReportRow>>> csr(
+            @RequestParam(required = false) String company, @RequestParam(required = false) String store,
             @RequestParam(required = false) String supplierCode,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
             @RequestParam(required = false) String status) {
-        return reportService.csrReport(company, store, supplierCode, fromDate, toDate, status);
+        List<ReportRow> data = reportService.csrReport(company, store, supplierCode, fromDate, toDate, status);
+        return ResponseEntity.ok(ApiResponse.paginated(data, PageMeta.of(1, data.size(), data.size())));
     }
 
-    /** R06 - CSA transactions by period */
     @GetMapping("/csa")
-    public List<ReportRow> csa(
-            @RequestParam(required = false) String company,
-            @RequestParam(required = false) String store,
+    public ResponseEntity<ApiResponse<List<ReportRow>>> csa(
+            @RequestParam(required = false) String company, @RequestParam(required = false) String store,
             @RequestParam(required = false) String supplierCode,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
             @RequestParam(required = false) String status) {
-        return reportService.csaReport(company, store, supplierCode, fromDate, toDate, status);
+        List<ReportRow> data = reportService.csaReport(company, store, supplierCode, fromDate, toDate, status);
+        return ResponseEntity.ok(ApiResponse.paginated(data, PageMeta.of(1, data.size(), data.size())));
     }
 
-    /** R07 - Settlement summary by period */
     @GetMapping("/settlement-summary")
-    public List<ReportRow> settlementSummary(
-            @RequestParam(required = false) String company,
-            @RequestParam(required = false) String store,
+    public ResponseEntity<ApiResponse<List<ReportRow>>> settlementSummary(
+            @RequestParam(required = false) String company, @RequestParam(required = false) String store,
             @RequestParam(required = false) String settlementType,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
             @RequestParam(required = false) String status) {
-        return reportService.settlementSummaryReport(company, store, settlementType, fromDate, toDate, status);
+        List<ReportRow> data = reportService.settlementSummaryReport(company, store, settlementType, fromDate, toDate, status);
+        return ResponseEntity.ok(ApiResponse.paginated(data, PageMeta.of(1, data.size(), data.size())));
     }
 
-    /** R08 - Settlement detail lines */
     @GetMapping("/settlement-detail/{settlementId}")
-    public List<ReportRow> settlementDetail(@PathVariable String settlementId) {
-        return reportService.settlementDetailReport(settlementId);
+    public ResponseEntity<ApiResponse<List<ReportRow>>> settlementDetail(@PathVariable String settlementId) {
+        List<ReportRow> data = reportService.settlementDetailReport(settlementId);
+        return ResponseEntity.ok(ApiResponse.paginated(data, PageMeta.of(1, data.size(), data.size())));
     }
 
-    /** R09 - Supplier book value inventory */
     @GetMapping("/supplier-book-value")
-    public List<StockSummaryRow> supplierBookValue(
-            @RequestParam(required = false) String company,
-            @RequestParam(required = false) String store,
-            @RequestParam(required = false) String supplierCode,
-            @RequestParam(required = false) String supplierContract) {
-        return reportService.supplierBookValueReport(company, store, supplierCode, supplierContract);
+    public ResponseEntity<ApiResponse<List<StockSummaryRow>>> supplierBookValue(
+            @RequestParam(required = false) String company, @RequestParam(required = false) String store,
+            @RequestParam(required = false) String supplierCode, @RequestParam(required = false) String supplierContract) {
+        List<StockSummaryRow> data = reportService.supplierBookValueReport(company, store, supplierCode, supplierContract);
+        return ResponseEntity.ok(ApiResponse.paginated(data, PageMeta.of(1, data.size(), data.size())));
     }
 
-    /** R10 - Customer consignment inventory on hand */
     @GetMapping("/customer-inventory")
-    public List<CustomerInventoryRow> customerInventory(
-            @RequestParam(required = false) String store,
-            @RequestParam(required = false) String customerCode) {
-        return reportService.customerInventoryReport(store, customerCode);
+    public ResponseEntity<ApiResponse<List<CustomerInventoryRow>>> customerInventory(
+            @RequestParam(required = false) String store, @RequestParam(required = false) String customerCode) {
+        List<CustomerInventoryRow> data = reportService.customerInventoryReport(store, customerCode);
+        return ResponseEntity.ok(ApiResponse.paginated(data, PageMeta.of(1, data.size(), data.size())));
     }
 
-    /** R11 - Open reservations (allocations + forecasts) */
     @GetMapping("/reservations")
-    public List<ReportRow> reservations(
-            @RequestParam(required = false) String store,
-            @RequestParam(required = false) String itemCode) {
-        return reportService.reservationReport(store, itemCode);
+    public ResponseEntity<ApiResponse<List<ReportRow>>> reservations(
+            @RequestParam(required = false) String store, @RequestParam(required = false) String itemCode) {
+        List<ReportRow> data = reportService.reservationReport(store, itemCode);
+        return ResponseEntity.ok(ApiResponse.paginated(data, PageMeta.of(1, data.size(), data.size())));
     }
 
-    /** R12 - Consignment setup item-supplier mapping */
     @GetMapping("/consignment-setup")
-    public List<ReportRow> consignmentSetup(
-            @RequestParam(required = false) String company,
-            @RequestParam(required = false) String store,
+    public ResponseEntity<ApiResponse<List<ReportRow>>> consignmentSetup(
+            @RequestParam(required = false) String company, @RequestParam(required = false) String store,
             @RequestParam(required = false) String supplierCode) {
-        return reportService.consignmentSetupReport(company, store, supplierCode);
+        List<ReportRow> data = reportService.consignmentSetupReport(company, store, supplierCode);
+        return ResponseEntity.ok(ApiResponse.paginated(data, PageMeta.of(1, data.size(), data.size())));
     }
 }

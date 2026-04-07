@@ -1,18 +1,14 @@
 package com.consignment.service.api;
 
+import com.consignment.service.model.ApiResponse;
 import com.consignment.service.model.csrv.CsrvRequest;
 import com.consignment.service.model.csrv.CsrvResponse;
 import com.consignment.service.model.csrv.CsrvSearchCriteria;
 import com.consignment.service.service.CsrvService;
 import jakarta.validation.Valid;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -27,47 +23,44 @@ public class CsrvController {
     }
 
     @GetMapping("/api/csrv")
-    public List<CsrvResponse> search(
+    public ResponseEntity<ApiResponse<List<CsrvResponse>>> search(
+            @RequestParam(required = false) String docNo,
             @RequestParam(required = false) String company,
             @RequestParam(required = false) String receivingStore,
             @RequestParam(required = false) String supplierCode,
             @RequestParam(required = false) String supplierContract,
             @RequestParam(required = false) String branch,
+            @RequestParam(required = false) String supplierDoNo,
             @RequestParam(required = false) String createdMethod,
             @RequestParam(required = false) String referenceNo,
             @RequestParam(required = false) String itemCode,
-            @RequestParam(required = false) String status
-    ) {
-        return csrvService.search(new CsrvSearchCriteria(
-                company,
-                receivingStore,
-                supplierCode,
-                supplierContract,
-                branch,
-                createdMethod,
-                referenceNo,
-                itemCode,
-                status
-        ));
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String createdBy,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int perPage) {
+        var result = csrvService.search(new CsrvSearchCriteria(docNo, company, receivingStore, supplierCode, supplierContract, branch, supplierDoNo, createdMethod, referenceNo, itemCode, status, createdBy, page, perPage));
+        return ResponseEntity.ok(ApiResponse.paginated(result.items(), result.meta()));
     }
 
     @PostMapping("/api/csrv")
-    public CsrvResponse create(@Valid @RequestBody CsrvRequest request) {
-        return csrvService.create(request);
+    public ResponseEntity<ApiResponse<CsrvResponse>> create(@Valid @RequestBody CsrvRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success("CSRV created", csrvService.create(request)));
     }
 
     @GetMapping("/api/csrv/{id}")
-    public CsrvResponse getById(@PathVariable String id) {
-        return csrvService.getById(id);
+    public ResponseEntity<ApiResponse<CsrvResponse>> getById(@PathVariable String id) {
+        return ResponseEntity.ok(ApiResponse.success(csrvService.getById(id)));
     }
 
     @PutMapping("/api/csrv/{id}/release")
-    public CsrvResponse release(@PathVariable String id) {
-        return csrvService.release(id);
+    public ResponseEntity<ApiResponse<CsrvResponse>> release(@PathVariable String id) {
+        return ResponseEntity.ok(ApiResponse.success(csrvService.release(id)));
     }
 
     @PostMapping("/api/acmm/csrv/auto-create")
-    public CsrvResponse autoCreate(@Valid @RequestBody CsrvRequest request) {
-        return csrvService.autoCreate(request);
+    public ResponseEntity<ApiResponse<CsrvResponse>> autoCreate(@Valid @RequestBody CsrvRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success("CSRV auto-created", csrvService.autoCreate(request)));
     }
 }

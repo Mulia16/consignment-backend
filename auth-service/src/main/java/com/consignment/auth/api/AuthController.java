@@ -1,6 +1,7 @@
 package com.consignment.auth.api;
 
 import com.consignment.auth.model.User;
+import com.consignment.auth.repository.TokenBlacklistRepository;
 import com.consignment.auth.repository.UserRepository;
 import com.consignment.auth.security.JwtUtil;
 import jakarta.validation.Valid;
@@ -27,44 +28,63 @@ public class AuthController {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
+    private final TokenBlacklistRepository blacklist;
 
     public AuthController(AuthenticationManager authManager, UserRepository userRepository,
-                          PasswordEncoder passwordEncoder, JwtUtil jwtUtil) {
+                          PasswordEncoder passwordEncoder, JwtUtil jwtUtil,
+                          TokenBlacklistRepository blacklist) {
         this.authManager = authManager;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
+        this.blacklist = blacklist;
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
+    public ResponseEntity<ApiResponse<?>> login(@Valid @RequestBody LoginRequest request) {
         try {
             Authentication auth = authManager.authenticate(
                     new UsernamePasswordAuthenticationToken(request.username(), request.password()));
             UserDetails userDetails = (UserDetails) auth.getPrincipal();
             Set<String> roles = userDetails.getAuthorities().stream()
-                    .map(a -> a.getAuthority()).collect(java.util.stream.Collectors.toSet());
+                    .map(a -> a.getAuthority())
+                    .collect(java.util.stream.Collectors.toSet());
             String token = jwtUtil.generateToken(userDetails.getUsername(), roles);
-            return ResponseEntity.ok(Map.of(
+            Map<String, Object> data = Map.of(
                     "token", token,
                     "token_type", "Bearer",
                     "expires_in", jwtUtil.getExpirationMs() / 1000,
                     "username", userDetails.getUsername(),
                     "roles", roles
-            ));
+            );
+            return ResponseEntity.ok(ApiResponse.ok("Login successful", data));
         } catch (DisabledException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("error", "Account is disabled"));
+                    .body(ApiResponse.error(401, "Account is disabled"));
         } catch (AuthenticationException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("error", "Invalid username or password"));
+                    .body(ApiResponse.error(401, "Invalid username or password"));
         }
     }
 
+    @PostMapping("/logout")
+    public ResponseEntity<ApiResponse<?>> logout(@RequestHeader("Authorization") String bearerToken) {
+        String token = bearerToken.replace("Bearer ", "").trim();
+        if (!jwtUtil.validateToken(token)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(401, "Token is invalid or already expired"));
+        }
+        blacklist.blacklist(jwtUtil.extractJti(token), jwtUtil.extractExpiration(token));
+        return ResponseEntity.ok(ApiResponse.ok("Logged out successfully", null));
+    }
+
     @PostMapping("/register")
-    public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request) {
+    public ResponseEntity<ApiResponse<?>> register(@Valid @RequestBody RegisterRequest request) {
         if (userRepository.existsByUsername(request.username())) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Username already taken"));
+            return ResponseEntity.badRequest().body(ApiResponse.error(400, "Username already taken"));
+        }
+        if (userRepository.existsByEmail(request.email())) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(400, "Email already registered"));
         }
         User user = new User();
         user.setUsername(request.username());
@@ -72,16 +92,27 @@ public class AuthController {
         user.setPassword(passwordEncoder.encode(request.password()));
         user.setRoles(Set.of("ROLE_USER"));
         userRepository.save(user);
-        return ResponseEntity.ok(Map.of("message", "User registered successfully"));
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success("User registered successfully", null));
     }
 
     @PostMapping("/validate")
-    public ResponseEntity<?> validate(@RequestHeader("Authorization") String bearerToken) {
-        String token = bearerToken.replace("Bearer ", "");
+    public ResponseEntity<ApiResponse<?>> validate(@RequestHeader("Authorization") String bearerToken) {
+        String token = bearerToken.replace("Bearer ", "").trim();
         if (!jwtUtil.validateToken(token)) {
-            return ResponseEntity.status(401).body(Map.of("valid", false));
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(401, "Token is invalid or expired"));
         }
-        return ResponseEntity.ok(Map.of("valid", true, "username", jwtUtil.extractUsername(token)));
+        String jti = jwtUtil.extractJti(token);
+        if (blacklist.isBlacklisted(jti)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(401, "Token has been revoked"));
+        }
+        Map<String, Object> data = Map.of(
+                "valid", true,
+                "username", jwtUtil.extractUsername(token)
+        );
+        return ResponseEntity.ok(ApiResponse.success(data));
     }
 
     record LoginRequest(@NotBlank String username, @NotBlank String password) {}

@@ -2,6 +2,7 @@ package com.consignment.service.service;
 
 import com.consignment.service.exception.BusinessRuleViolationException;
 import com.consignment.service.exception.ResourceNotFoundException;
+import com.consignment.service.model.PageMeta;
 import com.consignment.service.model.csdo.CsdoResponse;
 import com.consignment.service.model.csdo.CsdoResponseDetail;
 import com.consignment.service.model.csdo.CsdoSearchCriteria;
@@ -97,24 +98,14 @@ public class CsdoService {
         return getById(csdoHeader.getId());
     }
 
-    public List<CsdoResponse> listAll() {
-        return csdoMapper.findAllHeaders().stream()
-                .map(header -> toResponse(header, csdoMapper.findDetailsByHeaderId(header.getId())))
-                .toList();
-    }
+    public record PagedResult(List<CsdoResponse> items, PageMeta meta) {}
 
-    public List<CsdoResponse> search(CsdoSearchCriteria criteria) {
-        return csdoMapper.searchHeaders(
-                        normalize(criteria.company()),
-                        normalize(criteria.store()),
-                        normalize(criteria.customerCode()),
-                        normalize(criteria.status()),
-                        normalize(criteria.createdMethod()),
-                        normalize(criteria.referenceNo()),
-                        normalize(criteria.itemCode())
-                ).stream()
-                .map(header -> toResponse(header, csdoMapper.findDetailsByHeaderId(header.getId())))
+    public PagedResult search(CsdoSearchCriteria criteria) {
+        List<CsdoResponse> items = csdoMapper.searchHeaders(criteria).stream()
+                .map(h -> toResponse(h, csdoMapper.findDetailsByHeaderId(h.getId())))
                 .toList();
+        long total = csdoMapper.countHeaders(criteria);
+        return new PagedResult(items, PageMeta.of(criteria.page(), criteria.perPage(), total));
     }
 
     public CsdoResponse getById(String id) {

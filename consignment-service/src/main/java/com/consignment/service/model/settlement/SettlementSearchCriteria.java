@@ -1,16 +1,16 @@
-package com.consignment.service.model.csa;
+package com.consignment.service.model.settlement;
 
-public record CsaSearchCriteria(
+public record SettlementSearchCriteria(
         String docNo,
         String company,
         String store,
+        String settlementType,
+        String customerCode,
         String supplierCode,
         String supplierContract,
-        String transactionType,
         String status,
         String createdBy,
         String referenceNo,
-        String reasonCode,
         int page,
         int perPage
 ) {

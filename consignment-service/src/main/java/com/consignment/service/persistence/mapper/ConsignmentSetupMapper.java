@@ -1,7 +1,9 @@
 package com.consignment.service.persistence.mapper;
 
+import com.consignment.service.model.setup.ItemSetupSearchCriteria;
 import com.consignment.service.persistence.model.ExternalSupplierEntity;
 import com.consignment.service.persistence.model.InternalSupplierEntity;
+import com.consignment.service.persistence.model.ItemSetupEntity;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -11,6 +13,10 @@ import java.util.List;
 public interface ConsignmentSetupMapper {
 
     List<String> findItemCodesWithSetup();
+
+    List<ItemSetupEntity> searchItems(@Param("criteria") ItemSetupSearchCriteria criteria);
+
+    long countItems(@Param("criteria") ItemSetupSearchCriteria criteria);
 
     List<ExternalSupplierEntity> findExternalByItemCode(@Param("itemCode") String itemCode);
 

@@ -53,23 +53,38 @@
         WHERE id = #{id}
     </select>
 
-    <select id="searchHeaders" resultMap="CsrqHeaderResultMap">
+    <sql id="csrqFilterWhere">
+        <where>
+            <if test="c.docNo != null and c.docNo != ''">AND h.doc_no ILIKE CONCAT('%', #{c.docNo}, '%')</if>
+            <if test="c.company != null and c.company != ''">AND h.company = #{c.company}</if>
+            <if test="c.store != null and c.store != ''">AND h.store = #{c.store}</if>
+            <if test="c.supplierCode != null and c.supplierCode != ''">AND h.supplier_code = #{c.supplierCode}</if>
+            <if test="c.supplierContract != null and c.supplierContract != ''">AND h.supplier_contract = #{c.supplierContract}</if>
+            <if test="c.branch != null and c.branch != ''">AND h.branch = #{c.branch}</if>
+            <if test="c.internalSupplierStore != null and c.internalSupplierStore != ''">AND h.internal_supplier_store = #{c.internalSupplierStore}</if>
+            <if test="c.createdMethod != null and c.createdMethod != ''">AND h.created_method = #{c.createdMethod}</if>
+            <if test="c.referenceNo != null and c.referenceNo != ''">AND h.reference_no = #{c.referenceNo}</if>
+            <if test="c.status != null and c.status != ''">AND h.status = #{c.status}</if>
+            <if test="c.createdBy != null and c.createdBy != ''">AND h.created_by = #{c.createdBy}</if>
+            <if test="c.itemCode != null and c.itemCode != ''">AND d.item_code = #{c.itemCode}</if>
+        </where>
+    </sql>
+
+    <select id="searchHeaders" parameterType="com.consignment.service.model.csrq.CsrqSearchCriteria" resultMap="CsrqHeaderResultMap">
         SELECT DISTINCT h.id, h.doc_no, h.company, h.store, h.supplier_code, h.supplier_contract, h.branch,
                h.internal_supplier_store, h.notes, h.status, h.created_by, h.created_method, h.reference_no,
                h.released_at, h.created_at, h.updated_at
         FROM csrq_header h
         LEFT JOIN csrq_detail d ON d.csrq_id = h.id
-        WHERE (#{company} IS NULL OR h.company = #{company})
-          AND (#{store} IS NULL OR h.store = #{store})
-          AND (#{supplierCode} IS NULL OR h.supplier_code = #{supplierCode})
-          AND (#{supplierContract} IS NULL OR h.supplier_contract = #{supplierContract})
-          AND (#{branch} IS NULL OR h.branch = #{branch})
-          AND (#{internalSupplierStore} IS NULL OR h.internal_supplier_store = #{internalSupplierStore})
-          AND (#{createdMethod} IS NULL OR h.created_method = #{createdMethod})
-          AND (#{referenceNo} IS NULL OR h.reference_no = #{referenceNo})
-          AND (#{itemCode} IS NULL OR d.item_code = #{itemCode})
-          AND (#{status} IS NULL OR h.status = #{status})
+        <include refid="csrqFilterWhere"/>
         ORDER BY h.created_at DESC
+        LIMIT #{c.perPage} OFFSET #{c.offset}
+    </select>
+
+    <select id="countHeaders" parameterType="com.consignment.service.model.csrq.CsrqSearchCriteria" resultType="long">
+        SELECT COUNT(DISTINCT h.id) FROM csrq_header h
+        LEFT JOIN csrq_detail d ON d.csrq_id = h.id
+        <include refid="csrqFilterWhere"/>
     </select>
 
     <select id="findDetailsByHeaderId" resultMap="CsrqDetailResultMap">

@@ -2,6 +2,7 @@ package com.consignment.service.service;
 
 import com.consignment.service.exception.BusinessRuleViolationException;
 import com.consignment.service.exception.ResourceNotFoundException;
+import com.consignment.service.model.PageMeta;
 import com.consignment.service.model.csa.CsaDetailRequest;
 import com.consignment.service.model.csa.CsaRequest;
 import com.consignment.service.model.csa.CsaResponse;
@@ -76,23 +77,14 @@ public class CsaService {
         return getById(header.getId());
     }
 
-    public List<CsaResponse> listAll() {
-        return csaMapper.findAllHeaders().stream()
-                .map(header -> toResponse(header, csaMapper.findDetailsByHeaderId(header.getId())))
-                .toList();
-    }
+    public record PagedResult(List<CsaResponse> items, PageMeta meta) {}
 
-    public List<CsaResponse> search(CsaSearchCriteria criteria) {
-        return csaMapper.searchHeaders(
-                        normalize(criteria.company()),
-                        normalize(criteria.store()),
-                        normalize(criteria.transactionType()),
-                        normalize(criteria.status()),
-                        normalize(criteria.createdBy()),
-                        normalize(criteria.referenceNo())
-                ).stream()
-                .map(header -> toResponse(header, csaMapper.findDetailsByHeaderId(header.getId())))
+    public PagedResult search(CsaSearchCriteria criteria) {
+        List<CsaResponse> items = csaMapper.searchHeaders(criteria).stream()
+                .map(h -> toResponse(h, csaMapper.findDetailsByHeaderId(h.getId())))
                 .toList();
+        long total = csaMapper.countHeaders(criteria);
+        return new PagedResult(items, PageMeta.of(criteria.page(), criteria.perPage(), total));
     }
 
     public CsaResponse getById(String id) {

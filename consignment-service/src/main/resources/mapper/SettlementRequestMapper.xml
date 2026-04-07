@@ -76,19 +76,34 @@
         ORDER BY created_at DESC
     </select>
 
-    <select id="searchHeaders" resultMap="SettlementRequestHeaderResultMap">
+    <sql id="settlementFilterWhere">
+        <where>
+            <if test="c.docNo != null and c.docNo != ''">AND doc_no ILIKE CONCAT('%', #{c.docNo}, '%')</if>
+            <if test="c.company != null and c.company != ''">AND company = #{c.company}</if>
+            <if test="c.store != null and c.store != ''">AND store = #{c.store}</if>
+            <if test="c.settlementType != null and c.settlementType != ''">AND settlement_type = #{c.settlementType}</if>
+            <if test="c.customerCode != null and c.customerCode != ''">AND customer_code = #{c.customerCode}</if>
+            <if test="c.supplierCode != null and c.supplierCode != ''">AND supplier_code = #{c.supplierCode}</if>
+            <if test="c.supplierContract != null and c.supplierContract != ''">AND supplier_contract = #{c.supplierContract}</if>
+            <if test="c.status != null and c.status != ''">AND status = #{c.status}</if>
+            <if test="c.createdBy != null and c.createdBy != ''">AND created_by = #{c.createdBy}</if>
+            <if test="c.referenceNo != null and c.referenceNo != ''">AND reference_no = #{c.referenceNo}</if>
+        </where>
+    </sql>
+
+    <select id="searchHeaders" parameterType="com.consignment.service.model.settlement.SettlementSearchCriteria" resultMap="SettlementRequestHeaderResultMap">
         SELECT id, doc_no, company, store, settlement_type, customer_code, supplier_code, supplier_contract,
                total_amount, currency, status, created_by, reference_no, remark,
                ready_for_billing_at, billed_at, settled_at, created_at, updated_at
         FROM settlement_request_header
-        WHERE (#{company} IS NULL OR company = #{company})
-          AND (#{store} IS NULL OR store = #{store})
-          AND (#{settlementType} IS NULL OR settlement_type = #{settlementType})
-          AND (#{customerCode} IS NULL OR customer_code = #{customerCode})
-          AND (#{supplierCode} IS NULL OR supplier_code = #{supplierCode})
-          AND (#{status} IS NULL OR status = #{status})
-          AND (#{createdBy} IS NULL OR created_by = #{createdBy})
+        <include refid="settlementFilterWhere"/>
         ORDER BY created_at DESC
+        LIMIT #{c.perPage} OFFSET #{c.offset}
+    </select>
+
+    <select id="countHeaders" parameterType="com.consignment.service.model.settlement.SettlementSearchCriteria" resultType="long">
+        SELECT COUNT(*) FROM settlement_request_header
+        <include refid="settlementFilterWhere"/>
     </select>
 
     <select id="findDetailsByHeaderId" resultMap="SettlementDetailResultMap">

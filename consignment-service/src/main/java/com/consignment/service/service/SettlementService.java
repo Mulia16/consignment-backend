@@ -2,12 +2,14 @@ package com.consignment.service.service;
 
 import com.consignment.service.exception.BusinessRuleViolationException;
 import com.consignment.service.exception.ResourceNotFoundException;
+import com.consignment.service.model.PageMeta;
 import com.consignment.service.model.settlement.SettlementBatchGenerateRequest;
 import com.consignment.service.model.settlement.SettlementDocumentPostRequest;
 import com.consignment.service.model.settlement.SettlementDocumentSourceRequest;
 import com.consignment.service.model.settlement.SettlementDetailResponse;
 import com.consignment.service.model.settlement.SettlementRequest;
 import com.consignment.service.model.settlement.SettlementResponse;
+import com.consignment.service.model.settlement.SettlementSearchCriteria;
 import com.consignment.service.persistence.mapper.CsaMapper;
 import com.consignment.service.persistence.mapper.CsoMapper;
 import com.consignment.service.persistence.mapper.CsrMapper;
@@ -155,25 +157,14 @@ public class SettlementService {
         return postDetailsFromDocuments(created.id(), new SettlementDocumentPostRequest(sources));
     }
 
-    public List<SettlementResponse> listAll() {
-        return settlementRequestMapper.findAllHeaders().stream()
-                .map(header -> toResponse(header, settlementRequestMapper.findDetailsByHeaderId(header.getId())))
-                .toList();
-    }
+    public record PagedResult(List<SettlementResponse> items, PageMeta meta) {}
 
-    public List<SettlementResponse> search(String company, String store, String settlementType, 
-                                           String customerCode, String supplierCode, String status, String createdBy) {
-        return settlementRequestMapper.searchHeaders(
-                        normalize(company),
-                        normalize(store),
-                        normalize(settlementType),
-                        normalize(customerCode),
-                        normalize(supplierCode),
-                        normalize(status),
-                        normalize(createdBy)
-                ).stream()
-                .map(header -> toResponse(header, settlementRequestMapper.findDetailsByHeaderId(header.getId())))
+    public PagedResult search(SettlementSearchCriteria criteria) {
+        List<SettlementResponse> items = settlementRequestMapper.searchHeaders(criteria).stream()
+                .map(h -> toResponse(h, settlementRequestMapper.findDetailsByHeaderId(h.getId())))
                 .toList();
+        long total = settlementRequestMapper.countHeaders(criteria);
+        return new PagedResult(items, PageMeta.of(criteria.page(), criteria.perPage(), total));
     }
 
     public SettlementResponse getById(String id) {
@@ -277,16 +268,8 @@ public class SettlementService {
 
         if (TYPE_CUSTOMER.equalsIgnoreCase(request.settlementType())) {
             List<CsoHeaderEntity> csoHeaders = csoMapper.searchHeaders(
-                    request.company(),
-                    request.store(),
-                    request.customerCode(),
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    STATUS_RELEASED
-            );
+                    new com.consignment.service.model.cso.CsoSearchCriteria(null, request.company(), request.store(), request.customerCode(), null, null, null, null, null, STATUS_RELEASED, null, 1, Integer.MAX_VALUE)
+            ).stream().toList();
             for (CsoHeaderEntity header : csoHeaders) {
                 if (isWithinPeriod(header.getCreatedAt(), request.fromDate(), request.toDate())) {
                     sources.add(new SettlementDocumentSourceRequest(DOC_TYPE_CSO, header.getId(), defaultUnitPrice, "batch-generated"));
@@ -294,14 +277,8 @@ public class SettlementService {
             }
 
             List<CsdoHeaderEntity> csdoHeaders = csdoMapper.searchHeaders(
-                    request.company(),
-                    request.store(),
-                    request.customerCode(),
-                    STATUS_RELEASED,
-                    null,
-                    null,
-                    null
-            );
+                    new com.consignment.service.model.csdo.CsdoSearchCriteria(null, request.company(), request.store(), request.customerCode(), null, STATUS_RELEASED, null, null, 1, Integer.MAX_VALUE)
+            ).stream().toList();
             for (CsdoHeaderEntity header : csdoHeaders) {
                 if (isWithinPeriod(header.getCreatedAt(), request.fromDate(), request.toDate())) {
                     sources.add(new SettlementDocumentSourceRequest(DOC_TYPE_CSDO, header.getId(), defaultUnitPrice, "batch-generated"));
@@ -312,16 +289,8 @@ public class SettlementService {
         }
 
         List<CsrvHeaderEntity> csrvHeaders = csrvMapper.searchHeaders(
-                request.company(),
-                request.store(),
-                request.supplierCode(),
-                request.supplierContract(),
-                null,
-                null,
-                null,
-                null,
-                STATUS_RELEASED
-        );
+                new com.consignment.service.model.csrv.CsrvSearchCriteria(null, request.company(), request.store(), request.supplierCode(), request.supplierContract(), null, null, null, null, null, STATUS_RELEASED, null, 1, Integer.MAX_VALUE)
+        ).stream().toList();
         for (CsrvHeaderEntity header : csrvHeaders) {
             if (isWithinPeriod(header.getCreatedAt(), request.fromDate(), request.toDate())) {
                 sources.add(new SettlementDocumentSourceRequest(DOC_TYPE_CSRV, header.getId(), defaultUnitPrice, "batch-generated"));
@@ -329,15 +298,8 @@ public class SettlementService {
         }
 
         List<CsrHeaderEntity> csrHeaders = csrMapper.searchHeaders(
-                request.company(),
-                request.store(),
-                request.supplierCode(),
-                request.supplierContract(),
-                STATUS_COMPLETED,
-                null,
-                null,
-                null
-        );
+                new com.consignment.service.model.csr.CsrSearchCriteria(null, request.company(), request.store(), request.supplierCode(), request.supplierContract(), null, STATUS_COMPLETED, null, null, null, null, 1, Integer.MAX_VALUE)
+        ).stream().toList();
         for (CsrHeaderEntity header : csrHeaders) {
             if (isWithinPeriod(header.getCreatedAt(), request.fromDate(), request.toDate())) {
                 sources.add(new SettlementDocumentSourceRequest(DOC_TYPE_CSR, header.getId(), defaultUnitPrice, "batch-generated"));
@@ -345,20 +307,12 @@ public class SettlementService {
         }
 
         List<CsaHeaderEntity> csaHeaders = csaMapper.searchHeaders(
-                request.company(),
-                request.store(),
-                null,
-                STATUS_RELEASED,
-                null,
-                null
-        );
+                new com.consignment.service.model.csa.CsaSearchCriteria(null, request.company(), request.store(), request.supplierCode(), request.supplierContract(), null, STATUS_RELEASED, null, null, null, 1, Integer.MAX_VALUE)
+        ).stream().toList();
         for (CsaHeaderEntity header : csaHeaders) {
-            boolean supplierMatch = header.getSupplierCode() != null
-                    && header.getSupplierCode().equals(request.supplierCode());
-            boolean contractMatch = request.supplierContract() == null
-                    || request.supplierContract().isBlank()
+            boolean contractMatch = request.supplierContract() == null || request.supplierContract().isBlank()
                     || request.supplierContract().equals(header.getSupplierContract());
-            if (supplierMatch && contractMatch && isWithinPeriod(header.getCreatedAt(), request.fromDate(), request.toDate())) {
+            if (contractMatch && isWithinPeriod(header.getCreatedAt(), request.fromDate(), request.toDate())) {
                 sources.add(new SettlementDocumentSourceRequest(DOC_TYPE_CSA, header.getId(), defaultUnitPrice, "batch-generated"));
             }
         }

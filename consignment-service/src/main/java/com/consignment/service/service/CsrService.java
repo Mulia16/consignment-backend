@@ -2,6 +2,7 @@ package com.consignment.service.service;
 
 import com.consignment.service.exception.BusinessRuleViolationException;
 import com.consignment.service.exception.ResourceNotFoundException;
+import com.consignment.service.model.PageMeta;
 import com.consignment.service.model.csr.CsrActualQtyUpdateRequest;
 import com.consignment.service.model.csr.CsrDetailRequest;
 import com.consignment.service.model.csr.CsrRequest;
@@ -75,25 +76,14 @@ public class CsrService {
         return getById(header.getId());
     }
 
-    public List<CsrResponse> listAll() {
-        return csrMapper.findAllHeaders().stream()
-                .map(header -> toResponse(header, csrMapper.findDetailsByHeaderId(header.getId())))
-                .toList();
-    }
+    public record PagedResult(List<CsrResponse> items, PageMeta meta) {}
 
-    public List<CsrResponse> search(CsrSearchCriteria criteria) {
-        return csrMapper.searchHeaders(
-                        normalize(criteria.company()),
-                        normalize(criteria.store()),
-                        normalize(criteria.supplierCode()),
-                        normalize(criteria.supplierContract()),
-                        normalize(criteria.status()),
-                        normalize(criteria.createdBy()),
-                        normalize(criteria.referenceNo()),
-                        normalize(criteria.itemCode())
-                ).stream()
-                .map(header -> toResponse(header, csrMapper.findDetailsByHeaderId(header.getId())))
+    public PagedResult search(CsrSearchCriteria criteria) {
+        List<CsrResponse> items = csrMapper.searchHeaders(criteria).stream()
+                .map(h -> toResponse(h, csrMapper.findDetailsByHeaderId(h.getId())))
                 .toList();
+        long total = csrMapper.countHeaders(criteria);
+        return new PagedResult(items, PageMeta.of(criteria.page(), criteria.perPage(), total));
     }
 
     public CsrResponse getById(String id) {

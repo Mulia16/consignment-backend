@@ -59,22 +59,37 @@
         WHERE id = #{id}
     </select>
 
-    <select id="searchHeaders" resultMap="CsoHeaderResultMap">
+    <sql id="csoFilterWhere">
+        <where>
+            <if test="c.docNo != null and c.docNo != ''">AND h.doc_no ILIKE CONCAT('%', #{c.docNo}, '%')</if>
+            <if test="c.company != null and c.company != ''">AND h.company = #{c.company}</if>
+            <if test="c.store != null and c.store != ''">AND h.store = #{c.store}</if>
+            <if test="c.customerCode != null and c.customerCode != ''">AND h.customer_code = #{c.customerCode}</if>
+            <if test="c.supplierCode != null and c.supplierCode != ''">AND h.supplier_code = #{c.supplierCode}</if>
+            <if test="c.supplierContract != null and c.supplierContract != ''">AND h.supplier_contract = #{c.supplierContract}</if>
+            <if test="c.createdMethod != null and c.createdMethod != ''">AND h.created_method = #{c.createdMethod}</if>
+            <if test="c.referenceNo != null and c.referenceNo != ''">AND h.reference_no = #{c.referenceNo}</if>
+            <if test="c.status != null and c.status != ''">AND h.status = #{c.status}</if>
+            <if test="c.createdBy != null and c.createdBy != ''">AND h.created_by = #{c.createdBy}</if>
+            <if test="c.itemCode != null and c.itemCode != ''">AND d.item_code = #{c.itemCode}</if>
+        </where>
+    </sql>
+
+    <select id="searchHeaders" parameterType="com.consignment.service.model.cso.CsoSearchCriteria" resultMap="CsoHeaderResultMap">
         SELECT DISTINCT h.id, h.doc_no, h.company, h.store, h.customer_code, h.customer_branch, h.customer_email,
                h.supplier_code, h.supplier_contract, h.auto_generate_csdo, h.note, h.status, h.created_by,
                h.created_method, h.reference_no, h.released_at, h.released_by, h.created_at, h.updated_at
         FROM cso_header h
         LEFT JOIN cso_detail d ON d.cso_id = h.id
-        WHERE (#{company} IS NULL OR h.company = #{company})
-          AND (#{store} IS NULL OR h.store = #{store})
-          AND (#{customerCode} IS NULL OR h.customer_code = #{customerCode})
-          AND (#{supplierCode} IS NULL OR h.supplier_code = #{supplierCode})
-          AND (#{supplierContract} IS NULL OR h.supplier_contract = #{supplierContract})
-          AND (#{createdMethod} IS NULL OR h.created_method = #{createdMethod})
-          AND (#{referenceNo} IS NULL OR h.reference_no = #{referenceNo})
-          AND (#{itemCode} IS NULL OR d.item_code = #{itemCode})
-          AND (#{status} IS NULL OR h.status = #{status})
+        <include refid="csoFilterWhere"/>
         ORDER BY h.created_at DESC
+        LIMIT #{c.perPage} OFFSET #{c.offset}
+    </select>
+
+    <select id="countHeaders" parameterType="com.consignment.service.model.cso.CsoSearchCriteria" resultType="long">
+        SELECT COUNT(DISTINCT h.id) FROM cso_header h
+        LEFT JOIN cso_detail d ON d.cso_id = h.id
+        <include refid="csoFilterWhere"/>
     </select>
 
     <select id="findDetailsByHeaderId" resultMap="CsoDetailResultMap">
