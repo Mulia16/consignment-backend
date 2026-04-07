@@ -76,14 +76,33 @@
                consignee_store, current_inventory_qty, created_at, updated_at
         FROM consignment_external_supplier
         WHERE item_code = #{itemCode}
-        ORDER BY created_at ASC
+        ORDER BY supplier_code, supplier_contract, consignee_company, consignee_store ASC
+    </select>
+
+    <select id="findExternalByItemCodeAndSupplier" resultMap="ExternalSupplierResultMap">
+        SELECT id, item_code, supplier_code, supplier_type, supplier_contract, consignee_company,
+               consignee_store, current_inventory_qty, created_at, updated_at
+        FROM consignment_external_supplier
+        WHERE item_code = #{itemCode}
+          AND supplier_code = #{supplierCode}
+          AND supplier_contract = #{contractNumber}
+        ORDER BY consignee_company, consignee_store ASC
     </select>
 
     <select id="findInternalByItemCode" resultMap="InternalSupplierResultMap">
         SELECT id, item_code, supplier_code, supplier_store, consignee_company, consignee_store, created_at
         FROM consignment_internal_supplier
         WHERE item_code = #{itemCode}
-        ORDER BY created_at ASC
+        ORDER BY supplier_code, supplier_store, consignee_company, consignee_store ASC
+    </select>
+
+    <select id="findInternalByItemCodeAndSupplier" resultMap="InternalSupplierResultMap">
+        SELECT id, item_code, supplier_code, supplier_store, consignee_company, consignee_store, created_at
+        FROM consignment_internal_supplier
+        WHERE item_code = #{itemCode}
+          AND supplier_code = #{supplierCode}
+          AND supplier_store = #{supplierStore}
+        ORDER BY consignee_company, consignee_store ASC
     </select>
 
     <select id="findExternalById" resultMap="ExternalSupplierResultMap">
@@ -123,6 +142,13 @@
           AND id = #{id}
     </delete>
 
+    <delete id="deleteExternalBySupplier">
+        DELETE FROM consignment_external_supplier
+        WHERE item_code = #{itemCode}
+          AND supplier_code = #{supplierCode}
+          AND supplier_contract = #{contractNumber}
+    </delete>
+
     <insert id="insertInternal" parameterType="com.consignment.service.persistence.model.InternalSupplierEntity">
         INSERT INTO consignment_internal_supplier (
             id, item_code, supplier_code, supplier_store, consignee_company, consignee_store, created_at
@@ -130,4 +156,11 @@
             #{id}, #{itemCode}, #{supplierCode}, #{supplierStore}, #{consigneeCompany}, #{consigneeStore}, CURRENT_TIMESTAMP
         )
     </insert>
+
+    <delete id="deleteInternalBySupplier">
+        DELETE FROM consignment_internal_supplier
+        WHERE item_code = #{itemCode}
+          AND supplier_code = #{supplierCode}
+          AND supplier_store = #{supplierStore}
+    </delete>
 </mapper>

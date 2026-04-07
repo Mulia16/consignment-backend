@@ -89,53 +89,65 @@ public class ConsignmentSetupService {
         ensureItemExists(itemCode);
         ensureExternalSupplierType(request.supplierType());
         ensureItemAllowsExternal(itemCode);
-        ensureOneStoreOneSupplier(itemCode, request.consigneeStore(), request.supplierCode());
-        ensureNotUsedByInternal(itemCode, request.consigneeStore());
 
-        ExternalSupplierEntity entity = new ExternalSupplierEntity();
-        entity.setId(UUID.randomUUID().toString());
-        entity.setItemCode(itemCode);
-        entity.setSupplierCode(request.supplierCode());
-        entity.setSupplierType(request.supplierType());
-        entity.setSupplierContract(request.contractNumber());
-        entity.setConsigneeCompany(request.consigneeCompany());
-        entity.setConsigneeStore(request.consigneeStore());
-        entity.setCurrentInventoryQty(request.currentInventoryQty());
-        consignmentSetupMapper.insertExternal(entity);
-        return toExternalResponse(consignmentSetupMapper.findExternalById(itemCode, entity.getId()));
+        for (ExternalSupplierSetupRequest.ConsigneeRequest consignee : request.consignees()) {
+            for (String storeId : consignee.storeIds()) {
+                ensureNotUsedByInternal(itemCode, storeId);
+                ExternalSupplierEntity entity = new ExternalSupplierEntity();
+                entity.setId(UUID.randomUUID().toString());
+                entity.setItemCode(itemCode);
+                entity.setSupplierCode(request.supplierCode());
+                entity.setSupplierType(request.supplierType());
+                entity.setSupplierContract(request.contractNumber());
+                entity.setConsigneeCompany(consignee.companyId());
+                entity.setConsigneeStore(storeId);
+                entity.setCurrentInventoryQty(0);
+                consignmentSetupMapper.insertExternal(entity);
+            }
+        }
+        return toExternalGroupedResponse(request.supplierCode(), request.supplierType(), request.contractNumber(),
+                consignmentSetupMapper.findExternalByItemCodeAndSupplier(itemCode, request.supplierCode(), request.contractNumber()));
     }
 
     @Transactional
-    public ExternalSupplierSetupResponse updateExternalSupplier(String itemCode, String id, ExternalSupplierSetupRequest request) {
+    public ExternalSupplierSetupResponse updateExternalSupplier(String itemCode, String supplierCode, String contractNumber,
+                                                                 ExternalSupplierSetupRequest request) {
         ensureItemExists(itemCode);
-        ExternalSupplierEntity existing = consignmentSetupMapper.findExternalById(itemCode, id);
-        if (existing == null) throw new ResourceNotFoundException("External supplier setup not found: " + id);
-        if (inventoryValidationMapper.countBlockingInventory(itemCode, existing.getConsigneeStore()) > 0) {
-            throw new BusinessRuleViolationException("Cannot update while related inventory is not zero");
-        }
         ensureExternalSupplierType(request.supplierType());
         ensureItemAllowsExternal(itemCode);
-        ensureOneStoreOneSupplier(itemCode, request.consigneeStore(), request.supplierCode(), id);
-        ensureNotUsedByInternal(itemCode, request.consigneeStore());
 
-        existing.setSupplierCode(request.supplierCode());
-        existing.setSupplierType(request.supplierType());
-        existing.setSupplierContract(request.contractNumber());
-        existing.setConsigneeCompany(request.consigneeCompany());
-        existing.setConsigneeStore(request.consigneeStore());
-        existing.setCurrentInventoryQty(request.currentInventoryQty());
-        consignmentSetupMapper.updateExternal(existing);
-        return toExternalResponse(consignmentSetupMapper.findExternalById(itemCode, id));
+        // delete existing rows for this supplier+contract, then re-insert
+        consignmentSetupMapper.deleteExternalBySupplier(itemCode, supplierCode, contractNumber);
+
+        for (ExternalSupplierSetupRequest.ConsigneeRequest consignee : request.consignees()) {
+            for (String storeId : consignee.storeIds()) {
+                ensureNotUsedByInternal(itemCode, storeId);
+                ExternalSupplierEntity entity = new ExternalSupplierEntity();
+                entity.setId(UUID.randomUUID().toString());
+                entity.setItemCode(itemCode);
+                entity.setSupplierCode(request.supplierCode());
+                entity.setSupplierType(request.supplierType());
+                entity.setSupplierContract(request.contractNumber());
+                entity.setConsigneeCompany(consignee.companyId());
+                entity.setConsigneeStore(storeId);
+                entity.setCurrentInventoryQty(0);
+                consignmentSetupMapper.insertExternal(entity);
+            }
+        }
+        return toExternalGroupedResponse(request.supplierCode(), request.supplierType(), request.contractNumber(),
+                consignmentSetupMapper.findExternalByItemCodeAndSupplier(itemCode, request.supplierCode(), request.contractNumber()));
     }
 
     @Transactional
-    public void deleteExternalSupplier(String itemCode, String id) {
-        ExternalSupplierEntity existing = consignmentSetupMapper.findExternalById(itemCode, id);
-        if (existing == null) throw new ResourceNotFoundException("External supplier setup not found: " + id);
-        if (inventoryValidationMapper.countBlockingInventory(itemCode, existing.getConsigneeStore()) > 0) {
-            throw new BusinessRuleViolationException("Cannot delete while related inventory is not zero");
+    public void deleteExternalSupplier(String itemCode, String supplierCode, String contractNumber) {
+        List<ExternalSupplierEntity> existing = consignmentSetupMapper.findExternalByItemCodeAndSupplier(itemCode, supplierCode, contractNumber);
+        if (existing.isEmpty()) throw new ResourceNotFoundException("External supplier setup not found: " + supplierCode);
+        for (ExternalSupplierEntity e : existing) {
+            if (inventoryValidationMapper.countBlockingInventory(itemCode, e.getConsigneeStore()) > 0) {
+                throw new BusinessRuleViolationException("Cannot delete while related inventory is not zero for store: " + e.getConsigneeStore());
+            }
         }
-        consignmentSetupMapper.deleteExternal(itemCode, id);
+        consignmentSetupMapper.deleteExternalBySupplier(itemCode, supplierCode, contractNumber);
     }
 
     // ── Internal supplier ──────────────────────────────────────────────────────
@@ -145,19 +157,51 @@ public class ConsignmentSetupService {
         ensureItemExists(itemCode);
         ensureInternalHierarchy(itemCode, request.supplierStore());
 
-        InternalSupplierEntity entity = new InternalSupplierEntity();
-        entity.setId(UUID.randomUUID().toString());
-        entity.setItemCode(itemCode);
-        entity.setSupplierCode(request.supplierCode());
-        entity.setSupplierStore(request.supplierStore());
-        entity.setConsigneeCompany(request.consigneeCompany());
-        entity.setConsigneeStore(request.consigneeStore());
-        consignmentSetupMapper.insertInternal(entity);
+        for (InternalSupplierSetupRequest.ConsigneeRequest consignee : request.consignees()) {
+            for (String storeId : consignee.storeIds()) {
+                InternalSupplierEntity entity = new InternalSupplierEntity();
+                entity.setId(UUID.randomUUID().toString());
+                entity.setItemCode(itemCode);
+                entity.setSupplierCode(request.supplierCode());
+                entity.setSupplierStore(request.supplierStore());
+                entity.setConsigneeCompany(consignee.companyId());
+                entity.setConsigneeStore(storeId);
+                consignmentSetupMapper.insertInternal(entity);
+            }
+        }
+        return toInternalGroupedResponse(request.supplierCode(), request.supplierStore(),
+                consignmentSetupMapper.findInternalByItemCodeAndSupplier(itemCode, request.supplierCode(), request.supplierStore()));
+    }
 
-        return consignmentSetupMapper.findInternalByItemCode(itemCode).stream()
-                .filter(i -> entity.getId().equals(i.getId()))
-                .findFirst().map(this::toInternalResponse)
-                .orElseThrow(() -> new ResourceNotFoundException("Internal supplier not found after insert"));
+    @Transactional
+    public InternalSupplierSetupResponse updateInternalSupplier(String itemCode, String supplierCode, String supplierStore,
+                                                                  InternalSupplierSetupRequest request) {
+        ensureItemExists(itemCode);
+        ensureInternalHierarchy(itemCode, request.supplierStore());
+
+        consignmentSetupMapper.deleteInternalBySupplier(itemCode, supplierCode, supplierStore);
+
+        for (InternalSupplierSetupRequest.ConsigneeRequest consignee : request.consignees()) {
+            for (String storeId : consignee.storeIds()) {
+                InternalSupplierEntity entity = new InternalSupplierEntity();
+                entity.setId(UUID.randomUUID().toString());
+                entity.setItemCode(itemCode);
+                entity.setSupplierCode(request.supplierCode());
+                entity.setSupplierStore(request.supplierStore());
+                entity.setConsigneeCompany(consignee.companyId());
+                entity.setConsigneeStore(storeId);
+                consignmentSetupMapper.insertInternal(entity);
+            }
+        }
+        return toInternalGroupedResponse(request.supplierCode(), request.supplierStore(),
+                consignmentSetupMapper.findInternalByItemCodeAndSupplier(itemCode, request.supplierCode(), request.supplierStore()));
+    }
+
+    @Transactional
+    public void deleteInternalSupplier(String itemCode, String supplierCode, String supplierStore) {
+        List<InternalSupplierEntity> existing = consignmentSetupMapper.findInternalByItemCodeAndSupplier(itemCode, supplierCode, supplierStore);
+        if (existing.isEmpty()) throw new ResourceNotFoundException("Internal supplier setup not found: " + supplierCode);
+        consignmentSetupMapper.deleteInternalBySupplier(itemCode, supplierCode, supplierStore);
     }
 
     // ── Guards ─────────────────────────────────────────────────────────────────
@@ -226,6 +270,46 @@ public class ConsignmentSetupService {
             category = new ConsignmentSetupItemResponse.CategoryHierarchy(item.getCategoryL1(), item.getCategoryL2(), item.getCategoryL3());
         }
         String itemCode = item != null ? item.getItemCode() : (ext.isEmpty() ? "" : ext.get(0).getItemCode());
+
+        // group external by supplierCode+contractNumber
+        List<ExternalSupplierSetupResponse> externalGrouped = ext.stream()
+                .collect(java.util.stream.Collectors.groupingBy(
+                        e -> e.getSupplierCode() + "|" + e.getSupplierContract()))
+                .entrySet().stream()
+                .map(entry -> {
+                    List<ExternalSupplierEntity> rows = entry.getValue();
+                    ExternalSupplierEntity first = rows.get(0);
+                    List<ExternalSupplierSetupResponse.ConsigneeGroup> consignees = rows.stream()
+                            .collect(java.util.stream.Collectors.groupingBy(ExternalSupplierEntity::getConsigneeCompany))
+                            .entrySet().stream()
+                            .map(ce -> new ExternalSupplierSetupResponse.ConsigneeGroup(
+                                    ce.getKey(),
+                                    ce.getValue().stream().map(ExternalSupplierEntity::getConsigneeStore).toList()))
+                            .toList();
+                    return new ExternalSupplierSetupResponse(
+                            first.getId(), first.getSupplierCode(), first.getSupplierType(),
+                            first.getSupplierContract(), consignees);
+                }).toList();
+
+        // group internal by supplierCode+supplierStore
+        List<InternalSupplierSetupResponse> internalGrouped = intl.stream()
+                .collect(java.util.stream.Collectors.groupingBy(
+                        i -> i.getSupplierCode() + "|" + i.getSupplierStore()))
+                .entrySet().stream()
+                .map(entry -> {
+                    List<InternalSupplierEntity> rows = entry.getValue();
+                    InternalSupplierEntity first = rows.get(0);
+                    List<InternalSupplierSetupResponse.ConsigneeGroup> consignees = rows.stream()
+                            .collect(java.util.stream.Collectors.groupingBy(InternalSupplierEntity::getConsigneeCompany))
+                            .entrySet().stream()
+                            .map(ce -> new InternalSupplierSetupResponse.ConsigneeGroup(
+                                    ce.getKey(),
+                                    ce.getValue().stream().map(InternalSupplierEntity::getConsigneeStore).toList()))
+                            .toList();
+                    return new InternalSupplierSetupResponse(
+                            first.getId(), first.getSupplierCode(), first.getSupplierStore(), consignees);
+                }).toList();
+
         return new ConsignmentSetupItemResponse(
                 itemCode,
                 item != null ? item.getItemName() : null,
@@ -235,19 +319,32 @@ public class ConsignmentSetupService {
                 item != null ? item.getUnitRetail() : null,
                 item != null ? item.getMvc() : null,
                 category,
-                ext.stream().map(this::toExternalResponse).toList(),
-                intl.stream().map(this::toInternalResponse).toList()
+                externalGrouped,
+                internalGrouped
         );
     }
 
-    private ExternalSupplierSetupResponse toExternalResponse(ExternalSupplierEntity e) {
-        return new ExternalSupplierSetupResponse(e.getId(), e.getSupplierCode(), e.getSupplierType(),
-                e.getSupplierContract(), e.getConsigneeCompany(), e.getConsigneeStore(),
-                e.getCurrentInventoryQty(), e.getCreatedAt(), e.getUpdatedAt());
+    private ExternalSupplierSetupResponse toExternalGroupedResponse(String supplierCode, String supplierType,
+                                                                      String contractNumber, List<ExternalSupplierEntity> rows) {
+        String setupId = rows.isEmpty() ? null : rows.get(0).getId();
+        List<ExternalSupplierSetupResponse.ConsigneeGroup> consignees = rows.stream()
+                .collect(java.util.stream.Collectors.groupingBy(ExternalSupplierEntity::getConsigneeCompany))
+                .entrySet().stream()
+                .map(e -> new ExternalSupplierSetupResponse.ConsigneeGroup(
+                        e.getKey(), e.getValue().stream().map(ExternalSupplierEntity::getConsigneeStore).toList()))
+                .toList();
+        return new ExternalSupplierSetupResponse(setupId, supplierCode, supplierType, contractNumber, consignees);
     }
 
-    private InternalSupplierSetupResponse toInternalResponse(InternalSupplierEntity e) {
-        return new InternalSupplierSetupResponse(e.getId(), e.getSupplierCode(), e.getSupplierStore(),
-                e.getConsigneeCompany(), e.getConsigneeStore(), e.getCreatedAt());
+    private InternalSupplierSetupResponse toInternalGroupedResponse(String supplierCode, String supplierStore,
+                                                                      List<InternalSupplierEntity> rows) {
+        String setupId = rows.isEmpty() ? null : rows.get(0).getId();
+        List<InternalSupplierSetupResponse.ConsigneeGroup> consignees = rows.stream()
+                .collect(java.util.stream.Collectors.groupingBy(InternalSupplierEntity::getConsigneeCompany))
+                .entrySet().stream()
+                .map(e -> new InternalSupplierSetupResponse.ConsigneeGroup(
+                        e.getKey(), e.getValue().stream().map(InternalSupplierEntity::getConsigneeStore).toList()))
+                .toList();
+        return new InternalSupplierSetupResponse(setupId, supplierCode, supplierStore, consignees);
     }
 }

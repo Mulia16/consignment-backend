@@ -53,7 +53,6 @@ public class ConsignmentSetupController {
     public ResponseEntity<ApiResponse<ConsignmentSetupItemResponse>> updateItem(
             @PathVariable String itemCode,
             @Valid @RequestBody ItemSetupRequest request) {
-        // ensure path itemCode matches body
         var merged = new ItemSetupRequest(itemCode, request.itemName(), request.variant(),
                 request.hierarchy(), request.itemModel(), request.unitRetail(), request.mvc(),
                 request.categoryL1(), request.categoryL2(), request.categoryL3());
@@ -70,19 +69,22 @@ public class ConsignmentSetupController {
                 .body(ApiResponse.success("External supplier added", service.addExternalSupplier(itemCode, request)));
     }
 
-    @PutMapping("/item/{itemCode}/external-supplier/{id}")
+    @PutMapping("/item/{itemCode}/external-supplier/{supplierCode}/{contractNumber}")
     public ResponseEntity<ApiResponse<ExternalSupplierSetupResponse>> updateExternalSupplier(
             @PathVariable String itemCode,
-            @PathVariable String id,
+            @PathVariable String supplierCode,
+            @PathVariable String contractNumber,
             @Valid @RequestBody ExternalSupplierSetupRequest request) {
-        return ResponseEntity.ok(ApiResponse.success(service.updateExternalSupplier(itemCode, id, request)));
+        return ResponseEntity.ok(ApiResponse.ok("External supplier updated",
+                service.updateExternalSupplier(itemCode, supplierCode, contractNumber, request)));
     }
 
-    @DeleteMapping("/item/{itemCode}/external-supplier/{id}")
+    @DeleteMapping("/item/{itemCode}/external-supplier/{supplierCode}/{contractNumber}")
     public ResponseEntity<ApiResponse<Void>> deleteExternalSupplier(
             @PathVariable String itemCode,
-            @PathVariable String id) {
-        service.deleteExternalSupplier(itemCode, id);
+            @PathVariable String supplierCode,
+            @PathVariable String contractNumber) {
+        service.deleteExternalSupplier(itemCode, supplierCode, contractNumber);
         return ResponseEntity.ok(ApiResponse.ok("External supplier deleted", null));
     }
 
@@ -94,5 +96,24 @@ public class ConsignmentSetupController {
             @Valid @RequestBody InternalSupplierSetupRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Internal supplier added", service.addInternalSupplier(itemCode, request)));
+    }
+
+    @PutMapping("/item/{itemCode}/internal-supplier/{supplierCode}/{supplierStore}")
+    public ResponseEntity<ApiResponse<InternalSupplierSetupResponse>> updateInternalSupplier(
+            @PathVariable String itemCode,
+            @PathVariable String supplierCode,
+            @PathVariable String supplierStore,
+            @Valid @RequestBody InternalSupplierSetupRequest request) {
+        return ResponseEntity.ok(ApiResponse.ok("Internal supplier updated",
+                service.updateInternalSupplier(itemCode, supplierCode, supplierStore, request)));
+    }
+
+    @DeleteMapping("/item/{itemCode}/internal-supplier/{supplierCode}/{supplierStore}")
+    public ResponseEntity<ApiResponse<Void>> deleteInternalSupplier(
+            @PathVariable String itemCode,
+            @PathVariable String supplierCode,
+            @PathVariable String supplierStore) {
+        service.deleteInternalSupplier(itemCode, supplierCode, supplierStore);
+        return ResponseEntity.ok(ApiResponse.ok("Internal supplier deleted", null));
     }
 }

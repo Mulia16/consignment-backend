@@ -20,7 +20,15 @@ public interface ConsignmentSetupMapper {
 
     List<ExternalSupplierEntity> findExternalByItemCode(@Param("itemCode") String itemCode);
 
+    List<ExternalSupplierEntity> findExternalByItemCodeAndSupplier(@Param("itemCode") String itemCode,
+                                                                    @Param("supplierCode") String supplierCode,
+                                                                    @Param("contractNumber") String contractNumber);
+
     List<InternalSupplierEntity> findInternalByItemCode(@Param("itemCode") String itemCode);
+
+    List<InternalSupplierEntity> findInternalByItemCodeAndSupplier(@Param("itemCode") String itemCode,
+                                                                    @Param("supplierCode") String supplierCode,
+                                                                    @Param("supplierStore") String supplierStore);
 
     ExternalSupplierEntity findExternalById(@Param("itemCode") String itemCode, @Param("id") String id);
 
@@ -30,5 +38,13 @@ public interface ConsignmentSetupMapper {
 
     int deleteExternal(@Param("itemCode") String itemCode, @Param("id") String id);
 
+    int deleteExternalBySupplier(@Param("itemCode") String itemCode,
+                                  @Param("supplierCode") String supplierCode,
+                                  @Param("contractNumber") String contractNumber);
+
     void insertInternal(InternalSupplierEntity entity);
+
+    int deleteInternalBySupplier(@Param("itemCode") String itemCode,
+                                  @Param("supplierCode") String supplierCode,
+                                  @Param("supplierStore") String supplierStore);
 }

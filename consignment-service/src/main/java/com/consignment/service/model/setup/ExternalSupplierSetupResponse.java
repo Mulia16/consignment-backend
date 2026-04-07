@@ -1,16 +1,16 @@
 package com.consignment.service.model.setup;
 
-import java.time.Instant;
+import java.util.List;
 
 public record ExternalSupplierSetupResponse(
-        String id,
+        String setupId,
         String supplierCode,
         String supplierType,
         String contractNumber,
-        String consigneeCompany,
-        String consigneeStore,
-        int currentInventoryQty,
-        Instant createdAt,
-        Instant updatedAt
+        List<ConsigneeGroup> consignees
 ) {
+    public record ConsigneeGroup(
+            String companyId,
+            List<String> stores
+    ) {}
 }
