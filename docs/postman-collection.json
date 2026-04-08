@@ -259,3 +259,367 @@
         }
       ]
     },
+    {
+      "name": "03 - CSRQ (Stock Request)",
+      "item": [
+        {
+          "name": "List CSRQ",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/consignment/api/csrq?page=1&perPage=20", "host": ["{{baseUrl}}"], "path": ["consignment","api","csrq"],
+              "query": [
+                { "key": "page", "value": "1" }, { "key": "perPage", "value": "20" },
+                { "key": "docNo", "value": "", "disabled": true }, { "key": "company", "value": "", "disabled": true },
+                { "key": "store", "value": "", "disabled": true }, { "key": "supplierCode", "value": "", "disabled": true },
+                { "key": "supplierContract", "value": "", "disabled": true }, { "key": "branch", "value": "", "disabled": true },
+                { "key": "internalSupplierStore", "value": "", "disabled": true }, { "key": "createdMethod", "value": "", "disabled": true },
+                { "key": "referenceNo", "value": "", "disabled": true }, { "key": "itemCode", "value": "", "disabled": true },
+                { "key": "status", "value": "", "description": "HELD / RELEASED", "disabled": true }, { "key": "createdBy", "value": "", "disabled": true }
+              ]
+            }
+          },
+          "response": [{
+            "name": "200 OK",
+            "status": "OK", "code": 200,
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": "{\n  \"message\": \"success\",\n  \"status\": 200,\n  \"data\": [\n    {\n      \"id\": \"csrq-001\",\n      \"docNo\": \"CSRQ-00001\",\n      \"company\": \"COMP01\",\n      \"store\": \"STORE01\",\n      \"supplierCode\": \"SUPP001\",\n      \"supplierContract\": \"CONTRACT-2024-001\",\n      \"status\": \"HELD\",\n      \"createdBy\": \"admin\",\n      \"createdMethod\": \"MANUAL\",\n      \"createdAt\": \"2026-04-07T00:00:00Z\",\n      \"items\": [{ \"id\": \"d1\", \"itemCode\": \"ITEM001\", \"requestQty\": 10, \"requestUom\": \"PCS\" }]\n    }\n  ],\n  \"meta\": { \"page\": 1, \"perPage\": 20, \"totalData\": 1, \"totalPage\": 1 }\n}"
+          }]
+        },
+        {
+          "name": "Get CSRQ by ID",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/consignment/api/csrq/:id", "host": ["{{baseUrl}}"], "path": ["consignment","api","csrq",":id"], "variable": [{ "key": "id", "value": "" }] } },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": "{\n  \"message\": \"success\",\n  \"status\": 200,\n  \"data\": { \"id\": \"csrq-001\", \"docNo\": \"CSRQ-00001\", \"company\": \"COMP01\", \"store\": \"STORE01\", \"supplierCode\": \"SUPP001\", \"supplierContract\": \"CONTRACT-2024-001\", \"status\": \"HELD\", \"createdBy\": \"admin\", \"items\": [{ \"id\": \"d1\", \"itemCode\": \"ITEM001\", \"requestQty\": 10, \"requestUom\": \"PCS\" }] }\n}" }]
+        },
+        {
+          "name": "Create CSRQ",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"company\": \"COMP01\",\n  \"store\": \"STORE01\",\n  \"supplierCode\": \"SUPP001\",\n  \"supplierContract\": \"CONTRACT-2024-001\",\n  \"branch\": null,\n  \"internalSupplierStore\": null,\n  \"notes\": \"Request for restock\",\n  \"createdBy\": \"admin\",\n  \"createdMethod\": \"MANUAL\",\n  \"referenceNo\": null,\n  \"items\": [{ \"itemCode\": \"ITEM001\", \"requestQty\": 10, \"requestUom\": \"PCS\" }]\n}" }, "url": { "raw": "{{baseUrl}}/consignment/api/csrq", "host": ["{{baseUrl}}"], "path": ["consignment","api","csrq"] } },
+          "response": [{ "name": "201 Created", "status": "Created", "code": 201, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": "{\n  \"message\": \"CSRQ created\",\n  \"status\": 201,\n  \"data\": { \"id\": \"csrq-001\", \"docNo\": \"CSRQ-00001\", \"status\": \"HELD\", \"items\": [{ \"itemCode\": \"ITEM001\", \"requestQty\": 10, \"requestUom\": \"PCS\" }] }\n}" }]
+        },
+        {
+          "name": "Release CSRQ",
+          "request": { "method": "PUT", "url": { "raw": "{{baseUrl}}/consignment/api/csrq/:id/release", "host": ["{{baseUrl}}"], "path": ["consignment","api","csrq",":id","release"], "variable": [{ "key": "id", "value": "" }] } },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": "{\n  \"message\": \"success\",\n  \"status\": 200,\n  \"data\": { \"id\": \"csrq-001\", \"docNo\": \"CSRQ-00001\", \"status\": \"RELEASED\" }\n}" }]
+        },
+        {
+          "name": "Delete CSRQ",
+          "request": { "method": "DELETE", "url": { "raw": "{{baseUrl}}/consignment/api/csrq/:id", "host": ["{{baseUrl}}"], "path": ["consignment","api","csrq",":id"], "variable": [{ "key": "id", "value": "" }] } },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": "{\n  \"message\": \"CSRQ deleted\",\n  \"status\": 200\n}" }]
+        }
+      ]
+    },
+    {
+      "name": "04 - CSRV (Stock Receiving)",
+      "item": [
+        {
+          "name": "List CSRV",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/consignment/api/csrv?page=1&perPage=20", "host": ["{{baseUrl}}"], "path": ["consignment","api","csrv"],
+              "query": [
+                { "key": "page", "value": "1" }, { "key": "perPage", "value": "20" },
+                { "key": "docNo", "value": "", "disabled": true }, { "key": "company", "value": "", "disabled": true },
+                { "key": "receivingStore", "value": "", "disabled": true }, { "key": "supplierCode", "value": "", "disabled": true },
+                { "key": "supplierContract", "value": "", "disabled": true }, { "key": "branch", "value": "", "disabled": true },
+                { "key": "supplierDoNo", "value": "", "disabled": true }, { "key": "createdMethod", "value": "", "disabled": true },
+                { "key": "referenceNo", "value": "", "disabled": true }, { "key": "itemCode", "value": "", "disabled": true },
+                { "key": "status", "value": "", "description": "HELD / RELEASED", "disabled": true }, { "key": "createdBy", "value": "", "disabled": true }
+              ]
+            }
+          },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": "{\n  \"message\": \"success\",\n  \"status\": 200,\n  \"data\": [{ \"id\": \"csrv-001\", \"docNo\": \"CSRV-00001\", \"company\": \"COMP01\", \"receivingStore\": \"STORE01\", \"supplierCode\": \"SUPP001\", \"supplierContract\": \"CONTRACT-2024-001\", \"supplierDoNo\": \"DO-2024-001\", \"deliveryDate\": \"2026-04-10\", \"status\": \"HELD\", \"createdBy\": \"admin\", \"items\": [{ \"itemCode\": \"ITEM001\", \"availableQty\": 10, \"requestQty\": 10, \"receivingQty\": 10 }] }],\n  \"meta\": { \"page\": 1, \"perPage\": 20, \"totalData\": 1, \"totalPage\": 1 }\n}" }]
+        },
+        {
+          "name": "Get CSRV by ID",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/consignment/api/csrv/:id", "host": ["{{baseUrl}}"], "path": ["consignment","api","csrv",":id"], "variable": [{ "key": "id", "value": "" }] } },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": "{\n  \"message\": \"success\",\n  \"status\": 200,\n  \"data\": { \"id\": \"csrv-001\", \"docNo\": \"CSRV-00001\", \"status\": \"HELD\", \"items\": [{ \"itemCode\": \"ITEM001\", \"receivingQty\": 10 }] }\n}" }]
+        },
+        {
+          "name": "Create CSRV",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"company\": \"COMP01\",\n  \"receivingStore\": \"STORE01\",\n  \"supplierCode\": \"SUPP001\",\n  \"supplierContract\": \"CONTRACT-2024-001\",\n  \"branch\": null,\n  \"supplierDoNo\": \"DO-2024-001\",\n  \"deliveryDate\": \"2026-04-10\",\n  \"remark\": null,\n  \"createdBy\": \"admin\",\n  \"createdMethod\": \"MANUAL\",\n  \"referenceNo\": null,\n  \"items\": [{ \"itemCode\": \"ITEM001\", \"availableQty\": 10, \"requestQty\": 10, \"receivingQty\": 10 }]\n}" }, "url": { "raw": "{{baseUrl}}/consignment/api/csrv", "host": ["{{baseUrl}}"], "path": ["consignment","api","csrv"] } },
+          "response": [{ "name": "201 Created", "status": "Created", "code": 201, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": "{\n  \"message\": \"CSRV created\",\n  \"status\": 201,\n  \"data\": { \"id\": \"csrv-001\", \"docNo\": \"CSRV-00001\", \"status\": \"HELD\" }\n}" }]
+        },
+        {
+          "name": "Release CSRV",
+          "request": { "method": "PUT", "url": { "raw": "{{baseUrl}}/consignment/api/csrv/:id/release", "host": ["{{baseUrl}}"], "path": ["consignment","api","csrv",":id","release"], "variable": [{ "key": "id", "value": "" }] } },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": "{\n  \"message\": \"success\",\n  \"status\": 200,\n  \"data\": { \"id\": \"csrv-001\", \"docNo\": \"CSRV-00001\", \"status\": \"RELEASED\" }\n}" }]
+        }
+      ]
+    },
+    {
+      "name": "05 - CSO (Stock Order)",
+      "item": [
+        {
+          "name": "List CSO",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/consignment/api/cso?page=1&perPage=20", "host": ["{{baseUrl}}"], "path": ["consignment","api","cso"], "query": [{ "key": "page", "value": "1" }, { "key": "perPage", "value": "20" }, { "key": "docNo", "value": "", "disabled": true }, { "key": "company", "value": "", "disabled": true }, { "key": "store", "value": "", "disabled": true }, { "key": "customerCode", "value": "", "disabled": true }, { "key": "supplierCode", "value": "", "disabled": true }, { "key": "supplierContract", "value": "", "disabled": true }, { "key": "createdMethod", "value": "", "disabled": true }, { "key": "referenceNo", "value": "", "disabled": true }, { "key": "itemCode", "value": "", "disabled": true }, { "key": "status", "value": "", "description": "HELD / RELEASED / ERROR", "disabled": true }, { "key": "createdBy", "value": "", "disabled": true }] } },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": "{\n  \"message\": \"success\",\n  \"status\": 200,\n  \"data\": [{ \"id\": \"cso-001\", \"docNo\": \"CSO-00001\", \"company\": \"COMP01\", \"store\": \"STORE01\", \"customerCode\": \"CUST001\", \"supplierCode\": \"SUPP001\", \"supplierContract\": \"CONTRACT-2024-001\", \"status\": \"HELD\", \"createdBy\": \"admin\", \"items\": [{ \"itemCode\": \"ITEM001\", \"qty\": 5, \"uom\": \"PCS\" }] }],\n  \"meta\": { \"page\": 1, \"perPage\": 20, \"totalData\": 1, \"totalPage\": 1 }\n}" }]
+        },
+        {
+          "name": "Get CSO by ID",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/consignment/api/cso/:id", "host": ["{{baseUrl}}"], "path": ["consignment","api","cso",":id"], "variable": [{ "key": "id", "value": "" }] } },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": "{\n  \"message\": \"success\",\n  \"status\": 200,\n  \"data\": { \"id\": \"cso-001\", \"docNo\": \"CSO-00001\", \"status\": \"HELD\", \"items\": [{ \"itemCode\": \"ITEM001\", \"qty\": 5, \"uom\": \"PCS\" }] }\n}" }]
+        },
+        {
+          "name": "Create CSO",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"company\": \"COMP01\",\n  \"store\": \"STORE01\",\n  \"customerCode\": \"CUST001\",\n  \"customerBranch\": null,\n  \"customerEmail\": null,\n  \"supplierCode\": \"SUPP001\",\n  \"supplierContract\": \"CONTRACT-2024-001\",\n  \"autoGenerateCsdo\": false,\n  \"note\": null,\n  \"createdBy\": \"admin\",\n  \"createdMethod\": \"MANUAL\",\n  \"referenceNo\": null,\n  \"items\": [{ \"itemCode\": \"ITEM001\", \"qty\": 5, \"uom\": \"PCS\" }]\n}" }, "url": { "raw": "{{baseUrl}}/consignment/api/cso", "host": ["{{baseUrl}}"], "path": ["consignment","api","cso"] } },
+          "response": [{ "name": "201 Created", "status": "Created", "code": 201, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": "{\n  \"message\": \"CSO created\",\n  \"status\": 201,\n  \"data\": { \"id\": \"cso-001\", \"docNo\": \"CSO-00001\", \"status\": \"HELD\" }\n}" }]
+        },
+        {
+          "name": "Release CSO",
+          "request": { "method": "PUT", "url": { "raw": "{{baseUrl}}/consignment/api/cso/:id/release", "host": ["{{baseUrl}}"], "path": ["consignment","api","cso",":id","release"], "variable": [{ "key": "id", "value": "" }] } },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": "{\n  \"message\": \"success\",\n  \"status\": 200,\n  \"data\": { \"id\": \"cso-001\", \"docNo\": \"CSO-00001\", \"status\": \"RELEASED\" }\n}" }]
+        },
+        {
+          "name": "Delete CSO",
+          "request": { "method": "DELETE", "url": { "raw": "{{baseUrl}}/consignment/api/cso/:id", "host": ["{{baseUrl}}"], "path": ["consignment","api","cso",":id"], "variable": [{ "key": "id", "value": "" }] } },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": "{\n  \"message\": \"CSO deleted\",\n  \"status\": 200\n}" }]
+        }
+      ]
+    },
+    {
+      "name": "06 - CSDO (Delivery Order)",
+      "item": [
+        {
+          "name": "List CSDO",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/consignment/api/csdo?page=1&perPage=20", "host": ["{{baseUrl}}"], "path": ["consignment","api","csdo"], "query": [{ "key": "page", "value": "1" }, { "key": "perPage", "value": "20" }, { "key": "docNo", "value": "", "disabled": true }, { "key": "company", "value": "", "disabled": true }, { "key": "store", "value": "", "disabled": true }, { "key": "customerCode", "value": "", "disabled": true }, { "key": "csoDocNo", "value": "", "disabled": true }, { "key": "status", "value": "", "description": "HELD / RELEASED / REVERSED", "disabled": true }, { "key": "createdBy", "value": "", "disabled": true }, { "key": "itemCode", "value": "", "disabled": true }] } },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": "{\n  \"message\": \"success\",\n  \"status\": 200,\n  \"data\": [{ \"id\": \"csdo-001\", \"docNo\": \"CSDO-00001\", \"csoDocNo\": \"CSO-00001\", \"company\": \"COMP01\", \"store\": \"STORE01\", \"customerCode\": \"CUST001\", \"status\": \"HELD\", \"items\": [{ \"itemCode\": \"ITEM001\", \"qty\": 5, \"uom\": \"PCS\" }] }],\n  \"meta\": { \"page\": 1, \"perPage\": 20, \"totalData\": 1, \"totalPage\": 1 }\n}" }]
+        },
+        {
+          "name": "Get CSDO by ID",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/consignment/api/csdo/:id", "host": ["{{baseUrl}}"], "path": ["consignment","api","csdo",":id"], "variable": [{ "key": "id", "value": "" }] } },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": "{\n  \"message\": \"success\",\n  \"status\": 200,\n  \"data\": { \"id\": \"csdo-001\", \"docNo\": \"CSDO-00001\", \"status\": \"HELD\" }\n}" }]
+        },
+        {
+          "name": "Transfer from CSO",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"requireGenerateCdo\": false,\n  \"shippingMode\": null,\n  \"transporter\": null,\n  \"createdBy\": \"admin\"\n}" }, "url": { "raw": "{{baseUrl}}/consignment/api/csdo/transfer/:csoId", "host": ["{{baseUrl}}"], "path": ["consignment","api","csdo","transfer",":csoId"], "variable": [{ "key": "csoId", "value": "" }] } },
+          "response": [{ "name": "201 Created", "status": "Created", "code": 201, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": "{\n  \"message\": \"CSDO created from CSO\",\n  \"status\": 201,\n  \"data\": { \"id\": \"csdo-001\", \"docNo\": \"CSDO-00001\", \"status\": \"HELD\" }\n}" }]
+        },
+        {
+          "name": "Release CSDO",
+          "request": { "method": "PUT", "url": { "raw": "{{baseUrl}}/consignment/api/csdo/:id/release", "host": ["{{baseUrl}}"], "path": ["consignment","api","csdo",":id","release"], "variable": [{ "key": "id", "value": "" }] } },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": "{\n  \"message\": \"success\",\n  \"status\": 200,\n  \"data\": { \"id\": \"csdo-001\", \"status\": \"RELEASED\" }\n}" }]
+        },
+        {
+          "name": "Reverse CSDO",
+          "request": { "method": "PUT", "url": { "raw": "{{baseUrl}}/consignment/api/csdo/:id/reverse", "host": ["{{baseUrl}}"], "path": ["consignment","api","csdo",":id","reverse"], "variable": [{ "key": "id", "value": "" }] } },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": "{\n  \"message\": \"success\",\n  \"status\": 200,\n  \"data\": { \"id\": \"csdo-001\", \"status\": \"REVERSED\" }\n}" }]
+        }
+      ]
+    },
+    {
+      "name": "07 - CSR (Stock Return)",
+      "item": [
+        {
+          "name": "List CSR",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/consignment/api/csr?page=1&perPage=20", "host": ["{{baseUrl}}"], "path": ["consignment","api","csr"], "query": [{ "key": "page", "value": "1" }, { "key": "perPage", "value": "20" }, { "key": "docNo", "value": "", "disabled": true }, { "key": "company", "value": "", "disabled": true }, { "key": "store", "value": "", "disabled": true }, { "key": "supplierCode", "value": "", "disabled": true }, { "key": "supplierContract", "value": "", "disabled": true }, { "key": "internalSupplierStore", "value": "", "disabled": true }, { "key": "status", "value": "", "description": "HELD / RELEASED / COMPLETED", "disabled": true }, { "key": "createdBy", "value": "", "disabled": true }, { "key": "referenceNo", "value": "", "disabled": true }, { "key": "reasonCode", "value": "", "disabled": true }, { "key": "itemCode", "value": "", "disabled": true }] } },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": "{\n  \"message\": \"success\",\n  \"status\": 200,\n  \"data\": [{ \"id\": \"csr-001\", \"docNo\": \"CSR-00001\", \"company\": \"COMP01\", \"store\": \"STORE01\", \"supplierCode\": \"SUPP001\", \"supplierContract\": \"CONTRACT-2024-001\", \"reasonCode\": \"DAMAGE\", \"status\": \"HELD\", \"createdBy\": \"admin\", \"items\": [{ \"id\": \"d1\", \"itemCode\": \"ITEM001\", \"uom\": \"PCS\", \"qty\": 3, \"actualQty\": null }] }],\n  \"meta\": { \"page\": 1, \"perPage\": 20, \"totalData\": 1, \"totalPage\": 1 }\n}" }]
+        },
+        {
+          "name": "Get CSR by ID",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/consignment/api/csr/:id", "host": ["{{baseUrl}}"], "path": ["consignment","api","csr",":id"], "variable": [{ "key": "id", "value": "" }] } },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": "{\n  \"message\": \"success\",\n  \"status\": 200,\n  \"data\": { \"id\": \"csr-001\", \"docNo\": \"CSR-00001\", \"status\": \"HELD\" }\n}" }]
+        },
+        {
+          "name": "Create CSR",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"company\": \"COMP01\",\n  \"store\": \"STORE01\",\n  \"supplierCode\": \"SUPP001\",\n  \"supplierContract\": \"CONTRACT-2024-001\",\n  \"internalSupplierStore\": null,\n  \"supplierConfirmNote\": null,\n  \"reasonCode\": \"DAMAGE\",\n  \"remark\": null,\n  \"createdBy\": \"admin\",\n  \"referenceNo\": null,\n  \"items\": [{ \"itemCode\": \"ITEM001\", \"uom\": \"PCS\", \"qty\": 3, \"actualQty\": null }]\n}" }, "url": { "raw": "{{baseUrl}}/consignment/api/csr", "host": ["{{baseUrl}}"], "path": ["consignment","api","csr"] } },
+          "response": [{ "name": "201 Created", "status": "Created", "code": 201, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": "{\n  \"message\": \"CSR created\",\n  \"status\": 201,\n  \"data\": { \"id\": \"csr-001\", \"docNo\": \"CSR-00001\", \"status\": \"HELD\" }\n}" }]
+        },
+        {
+          "name": "Release CSR",
+          "request": { "method": "PUT", "url": { "raw": "{{baseUrl}}/consignment/api/csr/:id/release", "host": ["{{baseUrl}}"], "path": ["consignment","api","csr",":id","release"], "variable": [{ "key": "id", "value": "" }] } },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": "{\n  \"message\": \"success\",\n  \"status\": 200,\n  \"data\": { \"id\": \"csr-001\", \"status\": \"RELEASED\" }\n}" }]
+        },
+        {
+          "name": "Update Actual Qty",
+          "request": { "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"actualQty\": 2 }" }, "url": { "raw": "{{baseUrl}}/consignment/api/csr/:id/detail/:detailId/actual-qty", "host": ["{{baseUrl}}"], "path": ["consignment","api","csr",":id","detail",":detailId","actual-qty"], "variable": [{ "key": "id", "value": "" }, { "key": "detailId", "value": "" }] } },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": "{\n  \"message\": \"success\",\n  \"status\": 200,\n  \"data\": { \"id\": \"csr-001\", \"status\": \"RELEASED\", \"items\": [{ \"id\": \"d1\", \"itemCode\": \"ITEM001\", \"qty\": 3, \"actualQty\": 2 }] }\n}" }]
+        },
+        {
+          "name": "Complete CSR",
+          "request": { "method": "PUT", "url": { "raw": "{{baseUrl}}/consignment/api/csr/:id/complete", "host": ["{{baseUrl}}"], "path": ["consignment","api","csr",":id","complete"], "variable": [{ "key": "id", "value": "" }] } },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": "{\n  \"message\": \"success\",\n  \"status\": 200,\n  \"data\": { \"id\": \"csr-001\", \"status\": \"COMPLETED\" }\n}" }]
+        }
+      ]
+    },
+    {
+      "name": "08 - CSA (Stock Adjustment)",
+      "item": [
+        {
+          "name": "List CSA",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/consignment/api/csa?page=1&perPage=20", "host": ["{{baseUrl}}"], "path": ["consignment","api","csa"], "query": [{ "key": "page", "value": "1" }, { "key": "perPage", "value": "20" }, { "key": "docNo", "value": "", "disabled": true }, { "key": "company", "value": "", "disabled": true }, { "key": "store", "value": "", "disabled": true }, { "key": "supplierCode", "value": "", "disabled": true }, { "key": "supplierContract", "value": "", "disabled": true }, { "key": "transactionType", "value": "", "description": "ADJ_IN / ADJ_OUT", "disabled": true }, { "key": "status", "value": "", "description": "HELD / RELEASED", "disabled": true }, { "key": "createdBy", "value": "", "disabled": true }, { "key": "referenceNo", "value": "", "disabled": true }, { "key": "reasonCode", "value": "", "disabled": true }] } },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": "{\n  \"message\": \"success\",\n  \"status\": 200,\n  \"data\": [{ \"id\": \"csa-001\", \"docNo\": \"CSA-00001\", \"company\": \"COMP01\", \"store\": \"STORE01\", \"supplierCode\": \"SUPP001\", \"transactionType\": \"ADJ_IN\", \"status\": \"HELD\", \"createdBy\": \"admin\", \"items\": [{ \"itemCode\": \"ITEM001\", \"qty\": 2, \"uom\": \"PCS\", \"settlementDecision\": \"DIRECT_BV_INCREASE\" }] }],\n  \"meta\": { \"page\": 1, \"perPage\": 20, \"totalData\": 1, \"totalPage\": 1 }\n}" }]
+        },
+        {
+          "name": "Get CSA by ID",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/consignment/api/csa/:id", "host": ["{{baseUrl}}"], "path": ["consignment","api","csa",":id"], "variable": [{ "key": "id", "value": "" }] } },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": "{\n  \"message\": \"success\",\n  \"status\": 200,\n  \"data\": { \"id\": \"csa-001\", \"docNo\": \"CSA-00001\", \"status\": \"HELD\" }\n}" }]
+        },
+        {
+          "name": "Create CSA",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"company\": \"COMP01\",\n  \"store\": \"STORE01\",\n  \"supplierCode\": \"SUPP001\",\n  \"supplierContract\": \"CONTRACT-2024-001\",\n  \"transactionType\": \"ADJ_IN\",\n  \"referenceNo\": null,\n  \"reasonCode\": \"RECOUNT\",\n  \"remark\": null,\n  \"createFrom\": null,\n  \"createdBy\": \"admin\",\n  \"items\": [{ \"itemCode\": \"ITEM001\", \"itemName\": \"Laptop Pro 15\", \"qty\": 2, \"uom\": \"PCS\", \"settlementDecision\": \"DIRECT_BV_INCREASE\" }]\n}" }, "url": { "raw": "{{baseUrl}}/consignment/api/csa", "host": ["{{baseUrl}}"], "path": ["consignment","api","csa"] } },
+          "response": [{ "name": "201 Created", "status": "Created", "code": 201, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": "{\n  \"message\": \"CSA created\",\n  \"status\": 201,\n  \"data\": { \"id\": \"csa-001\", \"docNo\": \"CSA-00001\", \"status\": \"HELD\" }\n}" }]
+        },
+        {
+          "name": "Release CSA",
+          "request": { "method": "PUT", "header": [{ "key": "X-User", "value": "admin" }], "url": { "raw": "{{baseUrl}}/consignment/api/csa/:id/release", "host": ["{{baseUrl}}"], "path": ["consignment","api","csa",":id","release"], "variable": [{ "key": "id", "value": "" }] } },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": "{\n  \"message\": \"success\",\n  \"status\": 200,\n  \"data\": { \"id\": \"csa-001\", \"status\": \"RELEASED\" }\n}" }]
+        }
+      ]
+    },
+    {
+      "name": "09 - Settlement",
+      "item": [
+        {
+          "name": "List Settlement",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/consignment/api/settlement?page=1&perPage=20", "host": ["{{baseUrl}}"], "path": ["consignment","api","settlement"], "query": [{ "key": "page", "value": "1" }, { "key": "perPage", "value": "20" }, { "key": "docNo", "value": "", "disabled": true }, { "key": "company", "value": "", "disabled": true }, { "key": "store", "value": "", "disabled": true }, { "key": "settlementType", "value": "", "description": "CUSTOMER / SUPPLIER", "disabled": true }, { "key": "customerCode", "value": "", "disabled": true }, { "key": "supplierCode", "value": "", "disabled": true }, { "key": "supplierContract", "value": "", "disabled": true }, { "key": "status", "value": "", "description": "HELD / READY_FOR_BILLING / BILLED / SETTLED", "disabled": true }, { "key": "createdBy", "value": "", "disabled": true }, { "key": "referenceNo", "value": "", "disabled": true }] } },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": "{\n  \"message\": \"success\",\n  \"status\": 200,\n  \"data\": [{ \"id\": \"settl-001\", \"docNo\": \"SETTL-00001\", \"company\": \"COMP01\", \"store\": \"STORE01\", \"settlementType\": \"SUPPLIER\", \"supplierCode\": \"SUPP001\", \"supplierContract\": \"CONTRACT-2024-001\", \"totalAmount\": 150000000.0, \"currency\": \"IDR\", \"status\": \"HELD\", \"createdBy\": \"admin\", \"details\": [] }],\n  \"meta\": { \"page\": 1, \"perPage\": 20, \"totalData\": 1, \"totalPage\": 1 }\n}" }]
+        },
+        {
+          "name": "Get Settlement by ID",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/consignment/api/settlement/:id", "host": ["{{baseUrl}}"], "path": ["consignment","api","settlement",":id"], "variable": [{ "key": "id", "value": "" }] } },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": "{\n  \"message\": \"success\",\n  \"status\": 200,\n  \"data\": { \"id\": \"settl-001\", \"docNo\": \"SETTL-00001\", \"status\": \"HELD\", \"details\": [{ \"id\": \"d1\", \"documentType\": \"CSRV\", \"documentNo\": \"CSRV-00001\", \"itemCode\": \"ITEM001\", \"qty\": 10, \"uom\": \"PCS\", \"unitPrice\": 15000000.0, \"lineAmount\": 150000000.0 }] }\n}" }]
+        },
+        {
+          "name": "Create Settlement",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"company\": \"COMP01\",\n  \"store\": \"STORE01\",\n  \"settlementType\": \"SUPPLIER\",\n  \"customerCode\": null,\n  \"supplierCode\": \"SUPP001\",\n  \"supplierContract\": \"CONTRACT-2024-001\",\n  \"currency\": \"IDR\",\n  \"createdBy\": \"admin\",\n  \"referenceNo\": null,\n  \"remark\": null\n}" }, "url": { "raw": "{{baseUrl}}/consignment/api/settlement", "host": ["{{baseUrl}}"], "path": ["consignment","api","settlement"] } },
+          "response": [{ "name": "201 Created", "status": "Created", "code": 201, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": "{\n  \"message\": \"Settlement created\",\n  \"status\": 201,\n  \"data\": { \"id\": \"settl-001\", \"docNo\": \"SETTL-00001\", \"status\": \"HELD\", \"totalAmount\": 0 }\n}" }]
+        },
+        {
+          "name": "Generate Batch Settlement",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"company\": \"COMP01\",\n  \"store\": \"STORE01\",\n  \"settlementType\": \"SUPPLIER\",\n  \"customerCode\": null,\n  \"supplierCode\": \"SUPP001\",\n  \"supplierContract\": \"CONTRACT-2024-001\",\n  \"currency\": \"IDR\",\n  \"createdBy\": \"admin\",\n  \"referenceNo\": \"BATCH-APR-2026\",\n  \"fromDate\": \"2026-04-01\",\n  \"toDate\": \"2026-04-30\",\n  \"defaultUnitPrice\": 0\n}" }, "url": { "raw": "{{baseUrl}}/consignment/api/settlement/generate", "host": ["{{baseUrl}}"], "path": ["consignment","api","settlement","generate"] } },
+          "response": [{ "name": "201 Created", "status": "Created", "code": 201, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": "{\n  \"message\": \"Settlement generated\",\n  \"status\": 201,\n  \"data\": { \"id\": \"settl-001\", \"docNo\": \"SETTL-00001\", \"status\": \"HELD\", \"totalAmount\": 150000000.0 }\n}" }]
+        },
+        {
+          "name": "Post Details from Documents",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"documents\": [\n    { \"documentType\": \"CSRV\", \"documentId\": \"<csrv-id>\", \"unitPrice\": null, \"remark\": null }\n  ]\n}" }, "url": { "raw": "{{baseUrl}}/consignment/api/settlement/:id/details/from-documents", "host": ["{{baseUrl}}"], "path": ["consignment","api","settlement",":id","details","from-documents"], "variable": [{ "key": "id", "value": "" }] } },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": "{\n  \"message\": \"success\",\n  \"status\": 200,\n  \"data\": { \"id\": \"settl-001\", \"status\": \"HELD\", \"totalAmount\": 150000000.0, \"details\": [{ \"documentType\": \"CSRV\", \"documentNo\": \"CSRV-00001\", \"itemCode\": \"ITEM001\", \"qty\": 10, \"lineAmount\": 150000000.0 }] }\n}" }]
+        },
+        {
+          "name": "Prepare for Billing",
+          "request": { "method": "PUT", "url": { "raw": "{{baseUrl}}/consignment/api/settlement/:id/prepare-for-billing", "host": ["{{baseUrl}}"], "path": ["consignment","api","settlement",":id","prepare-for-billing"], "variable": [{ "key": "id", "value": "" }] } },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": "{\n  \"message\": \"success\",\n  \"status\": 200,\n  \"data\": { \"id\": \"settl-001\", \"status\": \"READY_FOR_BILLING\" }\n}" }]
+        },
+        {
+          "name": "Mark as Billed",
+          "request": { "method": "PUT", "url": { "raw": "{{baseUrl}}/consignment/api/settlement/:id/mark-as-billed", "host": ["{{baseUrl}}"], "path": ["consignment","api","settlement",":id","mark-as-billed"], "variable": [{ "key": "id", "value": "" }] } },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": "{\n  \"message\": \"success\",\n  \"status\": 200,\n  \"data\": { \"id\": \"settl-001\", \"status\": \"BILLED\" }\n}" }]
+        },
+        {
+          "name": "Mark as Settled",
+          "request": { "method": "PUT", "url": { "raw": "{{baseUrl}}/consignment/api/settlement/:id/mark-as-settled", "host": ["{{baseUrl}}"], "path": ["consignment","api","settlement",":id","mark-as-settled"], "variable": [{ "key": "id", "value": "" }] } },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": "{\n  \"message\": \"success\",\n  \"status\": 200,\n  \"data\": { \"id\": \"settl-001\", \"status\": \"SETTLED\" }\n}" }]
+        }
+      ]
+    },
+    {
+      "name": "00 - Master Data",
+      "item": [
+        {
+          "name": "Get Companies",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/consignment/api/master-data/companies",
+              "host": ["{{baseUrl}}"], "path": ["consignment","api","master-data","companies"]
+            }
+          },
+          "response": [{
+            "name": "200 OK",
+            "status": "OK", "code": 200,
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": "{\n  \"message\": \"success\",\n  \"status\": 200,\n  \"data\": [\"COMP01\", \"COMP02\"]\n}"
+          }]
+        },
+        {
+          "name": "Get Stores by Company",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/consignment/api/master-data/stores?company=COMP01",
+              "host": ["{{baseUrl}}"], "path": ["consignment","api","master-data","stores"],
+              "query": [
+                { "key": "company", "value": "COMP01", "description": "Filter by company (optional)" }
+              ]
+            }
+          },
+          "response": [{
+            "name": "200 OK",
+            "status": "OK", "code": 200,
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": "{\n  \"message\": \"success\",\n  \"status\": 200,\n  \"data\": [\"STORE01\", \"STORE02\", \"STORE03\"]\n}"
+          }]
+        },
+        {
+          "name": "Get Suppliers by Company+Store",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/consignment/api/master-data/suppliers?company=COMP01&store=STORE01",
+              "host": ["{{baseUrl}}"], "path": ["consignment","api","master-data","suppliers"],
+              "query": [
+                { "key": "company", "value": "COMP01", "description": "Filter by company (optional)" },
+                { "key": "store", "value": "STORE01", "description": "Filter by store (optional)" }
+              ]
+            }
+          },
+          "response": [{
+            "name": "200 OK",
+            "status": "OK", "code": 200,
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": "{\n  \"message\": \"success\",\n  \"status\": 200,\n  \"data\": [\"SUPP001\", \"SUPP002\"]\n}"
+          }]
+        },
+        {
+          "name": "Get Contracts by Supplier",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/consignment/api/master-data/contracts?company=COMP01&store=STORE01&supplierCode=SUPP001",
+              "host": ["{{baseUrl}}"], "path": ["consignment","api","master-data","contracts"],
+              "query": [
+                { "key": "company", "value": "COMP01", "description": "Filter by company (optional)" },
+                { "key": "store", "value": "STORE01", "description": "Filter by store (optional)" },
+                { "key": "supplierCode", "value": "SUPP001", "description": "Filter by supplier code (optional)" }
+              ]
+            }
+          },
+          "response": [{
+            "name": "200 OK",
+            "status": "OK", "code": 200,
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": "{\n  \"message\": \"success\",\n  \"status\": 200,\n  \"data\": [\"CONTRACT-2024-001\", \"CONTRACT-2024-002\"]\n}"
+          }]
+        },
+        {
+          "name": "Get Items by Supplier+Contract",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/consignment/api/master-data/items?company=COMP01&store=STORE01&supplierCode=SUPP001&supplierContract=CONTRACT-2024-001",
+              "host": ["{{baseUrl}}"], "path": ["consignment","api","master-data","items"],
+              "query": [
+                { "key": "company", "value": "COMP01", "description": "Filter by company (optional)" },
+                { "key": "store", "value": "STORE01", "description": "Filter by store (optional)" },
+                { "key": "supplierCode", "value": "SUPP001", "description": "Filter by supplier code (optional)" },
+                { "key": "supplierContract", "value": "CONTRACT-2024-001", "description": "Filter by contract (optional)" }
+              ]
+            }
+          },
+          "response": [{
+            "name": "200 OK",
+            "status": "OK", "code": 200,
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": "{\n  \"message\": \"success\",\n  \"status\": 200,\n  \"data\": [\"ITEM001\", \"ITEM002\", \"ITEM003\"]\n}"
+          }]
+        }
+      ]
+    },
+    {
+      "name": "10 - Reports",
+      "item": [
+        { "name": "R01 - CSRQ Report", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/consignment/api/reports/csrq", "host": ["{{baseUrl}}"], "path": ["consignment","api","reports","csrq"], "query": [{ "key": "company", "value": "", "disabled": true }, { "key": "store", "value": "", "disabled": true }, { "key": "supplierCode", "value": "", "disabled": true }, { "key": "fromDate", "value": "2026-01-01", "disabled": true }, { "key": "toDate", "value": "2026-12-31", "disabled": true }, { "key": "status", "value": "", "disabled": true }] } }, "response": [{ "name": "200 OK", "status": "OK", "code": 200, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": "{\n  \"message\": \"success\",\n  \"status\": 200,\n  \"data\": [{ \"docNo\": \"CSRQ-00001\", \"documentType\": \"CSRQ\", \"company\": \"COMP01\", \"store\": \"STORE01\", \"supplierCode\": \"SUPP001\", \"itemCode\": \"ITEM001\", \"qty\": 10, \"uom\": \"PCS\", \"status\": \"RELEASED\", \"createdAt\": \"2026-04-07T00:00:00Z\" }],\n  \"meta\": { \"page\": 1, \"perPage\": 20, \"totalData\": 1, \"totalPage\": 1 }\n}" }] },
+        { "name": "R09 - Supplier Book Value", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/consignment/api/reports/supplier-book-value", "host": ["{{baseUrl}}"], "path": ["consignment","api","reports","supplier-book-value"], "query": [{ "key": "company", "value": "", "disabled": true }, { "key": "store", "value": "", "disabled": true }, { "key": "supplierCode", "value": "", "disabled": true }, { "key": "supplierContract", "value": "", "disabled": true }] } }, "response": [{ "name": "200 OK", "status": "OK", "code": 200, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": "{\n  \"message\": \"success\",\n  \"status\": 200,\n  \"data\": [{ \"store\": \"STORE01\", \"supplierCode\": \"SUPP001\", \"supplierContract\": \"CONTRACT-2024-001\", \"itemCode\": \"ITEM001\", \"purchaseQty\": 100, \"closingQty\": 85, \"unbillQty\": 15 }],\n  \"meta\": { \"page\": 1, \"perPage\": 20, \"totalData\": 1, \"totalPage\": 1 }\n}" }] },
+        { "name": "R10 - Customer Inventory", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/consignment/api/reports/customer-inventory", "host": ["{{baseUrl}}"], "path": ["consignment","api","reports","customer-inventory"], "query": [{ "key": "store", "value": "", "disabled": true }, { "key": "customerCode", "value": "", "disabled": true }] } }, "response": [{ "name": "200 OK", "status": "OK", "code": 200, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": "{\n  \"message\": \"success\",\n  \"status\": 200,\n  \"data\": [{ \"issueFromStore\": \"STORE01\", \"customerCode\": \"CUST001\", \"branchCode\": null, \"itemCode\": \"ITEM001\", \"qty\": 5 }],\n  \"meta\": { \"page\": 1, \"perPage\": 20, \"totalData\": 1, \"totalPage\": 1 }\n}" }] }
+      ]
+    }
+  ]
+}

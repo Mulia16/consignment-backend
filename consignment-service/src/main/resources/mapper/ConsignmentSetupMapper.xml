@@ -163,4 +163,69 @@
           AND supplier_code = #{supplierCode}
           AND supplier_store = #{supplierStore}
     </delete>
+
+    <!-- ── Master Data Lookups ─────────────────────────────────────────────── -->
+
+    <select id="findDistinctCompanies" resultType="string">
+        SELECT DISTINCT consignee_company FROM consignment_external_supplier
+        ORDER BY consignee_company ASC
+    </select>
+
+    <select id="findStoresByCompany" resultType="string">
+        SELECT DISTINCT consignee_store FROM consignment_external_supplier
+        <where>
+            <if test="company != null and company != ''">
+                consignee_company = #{company}
+            </if>
+        </where>
+        ORDER BY consignee_store ASC
+    </select>
+
+    <select id="findSuppliersByStore" resultType="string">
+        SELECT DISTINCT supplier_code FROM consignment_external_supplier
+        <where>
+            <if test="company != null and company != ''">
+                AND consignee_company = #{company}
+            </if>
+            <if test="store != null and store != ''">
+                AND consignee_store = #{store}
+            </if>
+        </where>
+        ORDER BY supplier_code ASC
+    </select>
+
+    <select id="findContractsBySupplier" resultType="string">
+        SELECT DISTINCT supplier_contract FROM consignment_external_supplier
+        <where>
+            <if test="company != null and company != ''">
+                AND consignee_company = #{company}
+            </if>
+            <if test="store != null and store != ''">
+                AND consignee_store = #{store}
+            </if>
+            <if test="supplierCode != null and supplierCode != ''">
+                AND supplier_code = #{supplierCode}
+            </if>
+        </where>
+        ORDER BY supplier_contract ASC
+    </select>
+
+    <select id="findItemsBySupplierContract" resultType="string">
+        SELECT DISTINCT item_code FROM consignment_external_supplier
+        <where>
+            <if test="company != null and company != ''">
+                AND consignee_company = #{company}
+            </if>
+            <if test="store != null and store != ''">
+                AND consignee_store = #{store}
+            </if>
+            <if test="supplierCode != null and supplierCode != ''">
+                AND supplier_code = #{supplierCode}
+            </if>
+            <if test="supplierContract != null and supplierContract != ''">
+                AND supplier_contract = #{supplierContract}
+            </if>
+        </where>
+        ORDER BY item_code ASC
+    </select>
 </mapper>

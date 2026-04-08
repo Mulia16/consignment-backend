@@ -47,4 +47,22 @@ public interface ConsignmentSetupMapper {
     int deleteInternalBySupplier(@Param("itemCode") String itemCode,
                                   @Param("supplierCode") String supplierCode,
                                   @Param("supplierStore") String supplierStore);
+
+    // ── Master Data Lookups ────────────────────────────────────────────────────
+
+    List<String> findDistinctCompanies();
+
+    List<String> findStoresByCompany(@Param("company") String company);
+
+    List<String> findSuppliersByStore(@Param("company") String company,
+                                       @Param("store") String store);
+
+    List<String> findContractsBySupplier(@Param("company") String company,
+                                          @Param("store") String store,
+                                          @Param("supplierCode") String supplierCode);
+
+    List<String> findItemsBySupplierContract(@Param("company") String company,
+                                              @Param("store") String store,
+                                              @Param("supplierCode") String supplierCode,
+                                              @Param("supplierContract") String supplierContract);
 }
