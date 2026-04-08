@@ -134,6 +134,14 @@ public class CsoService {
         header.setCreatedBy(request.createdBy());
         header.setCreatedMethod(request.createdMethod());
         header.setReferenceNo(request.referenceNo());
+        header.setShippingTerm(request.shippingTerm());
+        header.setDeliveryDate(request.deliveryDate());
+        header.setShippingMode(request.shippingMode());
+        header.setTransporter(request.transporter());
+        header.setShippingTo(request.shippingTo());
+        header.setShippingAddress(request.shippingAddress());
+        header.setCustomerReference(request.customerReference());
+        header.setTransportInformation(request.transportInformation());
         csoMapper.insertHeader(header);
 
         for (CsoDetailRequest item : request.items()) {
@@ -244,6 +252,14 @@ public class CsoService {
                 header.getCreatedBy(),
                 header.getCreatedMethod(),
                 header.getReferenceNo(),
+                header.getShippingTerm(),
+                header.getDeliveryDate(),
+                header.getShippingMode(),
+                header.getTransporter(),
+                header.getShippingTo(),
+                header.getShippingAddress(),
+                header.getCustomerReference(),
+                header.getTransportInformation(),
                 header.getReleasedAt(),
                 header.getReleasedBy(),
                 header.getCreatedAt(),

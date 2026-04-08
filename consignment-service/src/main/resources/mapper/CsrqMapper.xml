@@ -120,8 +120,12 @@
             FROM consignment_internal_supplier internal_supplier
             WHERE internal_supplier.item_code = #{itemCode}
               AND internal_supplier.supplier_code = #{supplierCode}
-              AND internal_supplier.supplier_store = #{internalSupplierStore}
               AND internal_supplier.consignee_store = #{store}
+              <choose>
+                <when test="internalSupplierStore != null and internalSupplierStore != ''">
+                  AND internal_supplier.supplier_store = #{internalSupplierStore}
+                </when>
+              </choose>
         )
     </select>
 </mapper>

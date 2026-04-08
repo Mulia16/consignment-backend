@@ -20,6 +20,14 @@
         <result property="createdBy" column="created_by"/>
         <result property="createdMethod" column="created_method"/>
         <result property="referenceNo" column="reference_no"/>
+        <result property="shippingTerm" column="shipping_term"/>
+        <result property="deliveryDate" column="delivery_date"/>
+        <result property="shippingMode" column="shipping_mode"/>
+        <result property="transporter" column="transporter"/>
+        <result property="shippingTo" column="shipping_to"/>
+        <result property="shippingAddress" column="shipping_address"/>
+        <result property="customerReference" column="customer_reference"/>
+        <result property="transportInformation" column="transport_information"/>
         <result property="releasedAt" column="released_at"/>
         <result property="releasedBy" column="released_by"/>
         <result property="createdAt" column="created_at"/>
@@ -38,11 +46,15 @@
         INSERT INTO cso_header (
             id, doc_no, company, store, customer_code, customer_branch, customer_email,
             supplier_code, supplier_contract, auto_generate_csdo, note, status, created_by, created_method,
-            reference_no, released_at, released_by, created_at, updated_at
+            reference_no, shipping_term, delivery_date, shipping_mode, transporter, shipping_to,
+            shipping_address, customer_reference, transport_information,
+            released_at, released_by, created_at, updated_at
         ) VALUES (
             #{id}, #{docNo}, #{company}, #{store}, #{customerCode}, #{customerBranch}, #{customerEmail},
             #{supplierCode}, #{supplierContract}, #{autoGenerateCsdo}, #{note}, #{status}, #{createdBy}, #{createdMethod},
-            #{referenceNo}, #{releasedAt}, #{releasedBy}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+            #{referenceNo}, #{shippingTerm}, #{deliveryDate}, #{shippingMode}, #{transporter}, #{shippingTo},
+            #{shippingAddress}, #{customerReference}, #{transportInformation},
+            #{releasedAt}, #{releasedBy}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
         )
     </insert>
 
@@ -54,7 +66,9 @@
     <select id="findHeaderById" resultMap="CsoHeaderResultMap">
         SELECT id, doc_no, company, store, customer_code, customer_branch, customer_email, supplier_code,
                supplier_contract, auto_generate_csdo, note, status, created_by, created_method,
-               reference_no, released_at, released_by, created_at, updated_at
+               reference_no, shipping_term, delivery_date, shipping_mode, transporter, shipping_to,
+               shipping_address, customer_reference, transport_information,
+               released_at, released_by, created_at, updated_at
         FROM cso_header
         WHERE id = #{id}
     </select>
@@ -72,13 +86,17 @@
             <if test="c.status != null and c.status != ''">AND h.status = #{c.status}</if>
             <if test="c.createdBy != null and c.createdBy != ''">AND h.created_by = #{c.createdBy}</if>
             <if test="c.itemCode != null and c.itemCode != ''">AND d.item_code = #{c.itemCode}</if>
+            <if test="c.dateFrom != null">AND DATE(h.created_at) &gt;= #{c.dateFrom}</if>
+            <if test="c.dateTo != null">AND DATE(h.created_at) &lt;= #{c.dateTo}</if>
         </where>
     </sql>
 
     <select id="searchHeaders" parameterType="com.consignment.service.model.cso.CsoSearchCriteria" resultMap="CsoHeaderResultMap">
         SELECT DISTINCT h.id, h.doc_no, h.company, h.store, h.customer_code, h.customer_branch, h.customer_email,
                h.supplier_code, h.supplier_contract, h.auto_generate_csdo, h.note, h.status, h.created_by,
-               h.created_method, h.reference_no, h.released_at, h.released_by, h.created_at, h.updated_at
+               h.created_method, h.reference_no, h.shipping_term, h.delivery_date, h.shipping_mode,
+               h.transporter, h.shipping_to, h.shipping_address, h.customer_reference, h.transport_information,
+               h.released_at, h.released_by, h.created_at, h.updated_at
         FROM cso_header h
         LEFT JOIN cso_detail d ON d.cso_id = h.id
         <include refid="csoFilterWhere"/>

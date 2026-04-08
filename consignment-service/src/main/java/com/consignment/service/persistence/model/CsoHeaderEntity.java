@@ -1,6 +1,7 @@
 package com.consignment.service.persistence.model;
 
 import java.time.Instant;
+import java.time.LocalDate;
 
 public class CsoHeaderEntity {
 
@@ -19,6 +20,14 @@ public class CsoHeaderEntity {
     private String createdBy;
     private String createdMethod;
     private String referenceNo;
+    private String shippingTerm;
+    private LocalDate deliveryDate;
+    private String shippingMode;
+    private String transporter;
+    private String shippingTo;
+    private String shippingAddress;
+    private String customerReference;
+    private String transportInformation;
     private Instant releasedAt;
     private String releasedBy;
     private Instant createdAt;
@@ -54,6 +63,22 @@ public class CsoHeaderEntity {
     public void setCreatedMethod(String createdMethod) { this.createdMethod = createdMethod; }
     public String getReferenceNo() { return referenceNo; }
     public void setReferenceNo(String referenceNo) { this.referenceNo = referenceNo; }
+    public String getShippingTerm() { return shippingTerm; }
+    public void setShippingTerm(String shippingTerm) { this.shippingTerm = shippingTerm; }
+    public LocalDate getDeliveryDate() { return deliveryDate; }
+    public void setDeliveryDate(LocalDate deliveryDate) { this.deliveryDate = deliveryDate; }
+    public String getShippingMode() { return shippingMode; }
+    public void setShippingMode(String shippingMode) { this.shippingMode = shippingMode; }
+    public String getTransporter() { return transporter; }
+    public void setTransporter(String transporter) { this.transporter = transporter; }
+    public String getShippingTo() { return shippingTo; }
+    public void setShippingTo(String shippingTo) { this.shippingTo = shippingTo; }
+    public String getShippingAddress() { return shippingAddress; }
+    public void setShippingAddress(String shippingAddress) { this.shippingAddress = shippingAddress; }
+    public String getCustomerReference() { return customerReference; }
+    public void setCustomerReference(String customerReference) { this.customerReference = customerReference; }
+    public String getTransportInformation() { return transportInformation; }
+    public void setTransportInformation(String transportInformation) { this.transportInformation = transportInformation; }
     public Instant getReleasedAt() { return releasedAt; }
     public void setReleasedAt(Instant releasedAt) { this.releasedAt = releasedAt; }
     public String getReleasedBy() { return releasedBy; }

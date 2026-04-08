@@ -6,10 +6,12 @@ import com.consignment.service.model.cso.CsoResponse;
 import com.consignment.service.model.cso.CsoSearchCriteria;
 import com.consignment.service.service.CsoService;
 import jakarta.validation.Valid;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -35,9 +37,11 @@ public class CsoController {
             @RequestParam(required = false) String itemCode,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String createdBy,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int perPage) {
-        var result = csoService.search(new CsoSearchCriteria(docNo, company, store, customerCode, supplierCode, supplierContract, createdMethod, referenceNo, itemCode, status, createdBy, page, perPage));
+        var result = csoService.search(new CsoSearchCriteria(docNo, company, store, customerCode, supplierCode, supplierContract, createdMethod, referenceNo, itemCode, status, createdBy, dateFrom, dateTo, page, perPage));
         return ResponseEntity.ok(ApiResponse.paginated(result.items(), result.meta()));
     }
 

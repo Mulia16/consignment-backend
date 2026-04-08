@@ -1,5 +1,7 @@
 package com.consignment.service.model.cso;
 
+import java.time.LocalDate;
+
 public record CsoSearchCriteria(
         String docNo,
         String company,
@@ -12,6 +14,8 @@ public record CsoSearchCriteria(
         String itemCode,
         String status,
         String createdBy,
+        LocalDate dateFrom,
+        LocalDate dateTo,
         int page,
         int perPage
 ) {
