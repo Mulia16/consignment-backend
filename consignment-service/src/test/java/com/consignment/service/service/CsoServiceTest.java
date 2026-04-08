@@ -55,6 +55,7 @@ class CsoServiceTest {
                 "system",
                 "MANUAL",
                 "REF01",
+                null, null, null, null, null, null, null, null,
                 List.of(new CsoDetailRequest("SKU01", BigDecimal.ONE, "PCS"))
         );
 
@@ -76,6 +77,7 @@ class CsoServiceTest {
                 "user1",
                 "MANUAL",
                 "REF01",
+                null, null, null, null, null, null, null, null,
                 List.of(new CsoDetailRequest("SKU01", BigDecimal.ONE, "PCS"))
         );
 

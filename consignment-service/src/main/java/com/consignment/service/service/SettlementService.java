@@ -268,7 +268,7 @@ public class SettlementService {
 
         if (TYPE_CUSTOMER.equalsIgnoreCase(request.settlementType())) {
             List<CsoHeaderEntity> csoHeaders = csoMapper.searchHeaders(
-                    new com.consignment.service.model.cso.CsoSearchCriteria(null, request.company(), request.store(), request.customerCode(), null, null, null, null, null, STATUS_RELEASED, null, 1, Integer.MAX_VALUE)
+                    new com.consignment.service.model.cso.CsoSearchCriteria(null, request.company(), request.store(), request.customerCode(), null, null, null, null, null, STATUS_RELEASED, null, null, null, 1, Integer.MAX_VALUE)
             ).stream().toList();
             for (CsoHeaderEntity header : csoHeaders) {
                 if (isWithinPeriod(header.getCreatedAt(), request.fromDate(), request.toDate())) {
