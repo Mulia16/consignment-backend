@@ -18,6 +18,7 @@ public class ApiLogDocument {
     private String responsePayload;
     private int statusCode;
     private long processingTimeMs;
+    private String errorDetail;
 
     public String getId() {
         return id;
@@ -89,5 +90,13 @@ public class ApiLogDocument {
 
     public void setProcessingTimeMs(long processingTimeMs) {
         this.processingTimeMs = processingTimeMs;
+    }
+
+    public String getErrorDetail() {
+        return errorDetail;
+    }
+
+    public void setErrorDetail(String errorDetail) {
+        this.errorDetail = errorDetail;
     }
 }

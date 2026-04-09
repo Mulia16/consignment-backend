@@ -39,13 +39,15 @@ public class ApiLoggingFilter extends OncePerRequestFilter {
             filterChain.doFilter(wrappedRequest, wrappedResponse);
         } finally {
             String correlationId = wrappedResponse.getHeader(CorrelationIdFilter.CORRELATION_ID_HEADER);
+            String errorDetail = (String) wrappedRequest.getAttribute("errorDetail");
             apiLoggingService.logInbound(
                     request.getRequestURI(),
                     correlationId,
                     extractPayload(wrappedRequest.getContentAsByteArray(), wrappedRequest.getCharacterEncoding()),
                     extractPayload(wrappedResponse.getContentAsByteArray(), wrappedResponse.getCharacterEncoding()),
                     wrappedResponse.getStatus(),
-                    Duration.between(start, Instant.now()).toMillis()
+                    Duration.between(start, Instant.now()).toMillis(),
+                    errorDetail
             );
             wrappedResponse.copyBodyToResponse();
         }

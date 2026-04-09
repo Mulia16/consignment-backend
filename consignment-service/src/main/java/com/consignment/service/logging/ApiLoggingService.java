@@ -31,6 +31,18 @@ public class ApiLoggingService {
             int statusCode,
             long processingTimeMs
     ) {
+        logInbound(endpoint, correlationId, requestPayload, responsePayload, statusCode, processingTimeMs, null);
+    }
+
+    public void logInbound(
+            String endpoint,
+            String correlationId,
+            String requestPayload,
+            String responsePayload,
+            int statusCode,
+            long processingTimeMs,
+            String errorDetail
+    ) {
         if (!enabled) {
             return;
         }
@@ -44,6 +56,7 @@ public class ApiLoggingService {
         document.setResponsePayload(trimPayload(responsePayload));
         document.setStatusCode(statusCode);
         document.setProcessingTimeMs(processingTimeMs);
+        document.setErrorDetail(trimPayload(errorDetail));
 
         try {
             apiLogRepository.save(document);
