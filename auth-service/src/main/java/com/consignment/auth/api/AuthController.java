@@ -4,8 +4,10 @@ import com.consignment.auth.model.User;
 import com.consignment.auth.repository.TokenBlacklistRepository;
 import com.consignment.auth.repository.UserRepository;
 import com.consignment.auth.security.JwtUtil;
+import jakarta.validation.constraints.Email;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -81,10 +83,18 @@ public class AuthController {
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<?>> register(@Valid @RequestBody RegisterRequest request) {
         if (userRepository.existsByUsername(request.username())) {
-            return ResponseEntity.badRequest().body(ApiResponse.error(400, "Username already taken"));
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.error(409, "Validation failed", java.util.List.of(Map.of(
+                    "field", "username",
+                    "message", "Username already exists",
+                    "value", request.username()
+            ))));
         }
         if (userRepository.existsByEmail(request.email())) {
-            return ResponseEntity.badRequest().body(ApiResponse.error(400, "Email already registered"));
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.error(409, "Validation failed", java.util.List.of(Map.of(
+                    "field", "email",
+                    "message", "Email already exists",
+                    "value", request.email()
+            ))));
         }
         User user = new User();
         user.setUsername(request.username());
@@ -115,6 +125,14 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success(data));
     }
 
-    record LoginRequest(@NotBlank String username, @NotBlank String password) {}
-    record RegisterRequest(@NotBlank String username, @NotBlank String email, @NotBlank String password) {}
+        record LoginRequest(
+            @NotBlank(message = "username is required") String username,
+            @NotBlank(message = "password is required") String password
+        ) {}
+
+        record RegisterRequest(
+            @NotBlank(message = "username is required") @Size(max = 100, message = "username max length is 100") String username,
+            @NotBlank(message = "email is required") @Email(message = "email format is invalid") @Size(max = 150, message = "email max length is 150") String email,
+            @NotBlank(message = "password is required") @Size(min = 8, max = 100, message = "password length must be between 8 and 100") String password
+        ) {}
 }
