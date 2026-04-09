@@ -14,6 +14,7 @@ import com.consignment.service.persistence.mapper.CsoMapper;
 import com.consignment.service.persistence.mapper.ReservationMapper;
 import com.consignment.service.persistence.model.CsoDetailEntity;
 import com.consignment.service.persistence.model.CsoHeaderEntity;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,7 +23,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicLong;
 
 @Service
 public class CsoService {
@@ -38,7 +38,6 @@ public class CsoService {
     private final CsoMapper csoMapper;
     private final ReservationMapper reservationMapper;
     private final CsdoService csdoService;
-    private final AtomicLong sequence = new AtomicLong(1);
 
     public CsoService(CsoMapper csoMapper, ReservationMapper reservationMapper, CsdoService csdoService) {
         this.csoMapper = csoMapper;
@@ -125,6 +124,35 @@ public class CsoService {
     }
 
     private CsoHeaderEntity persistHeaderAndDetails(CsoRequest request, String status) {
+        CsoHeaderEntity header = null;
+        final int maxAttempts = 5;
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            header = buildHeader(request, status);
+            try {
+                csoMapper.insertHeader(header);
+                break;
+            } catch (DataIntegrityViolationException ex) {
+                if (isDocNoConflict(ex) && attempt < maxAttempts) {
+                    continue;
+                }
+                throw ex;
+            }
+        }
+
+        for (CsoDetailRequest item : request.items()) {
+            CsoDetailEntity detail = new CsoDetailEntity();
+            detail.setId(UUID.randomUUID().toString());
+            detail.setCsoId(header.getId());
+            detail.setItemCode(item.itemCode());
+            detail.setQty(item.qty());
+            detail.setUom(item.uom());
+            csoMapper.insertDetail(detail);
+        }
+
+        return header;
+    }
+
+    private CsoHeaderEntity buildHeader(CsoRequest request, String status) {
         CsoHeaderEntity header = new CsoHeaderEntity();
         header.setId(UUID.randomUUID().toString());
         header.setDocNo(nextDocNo());
@@ -149,18 +177,6 @@ public class CsoService {
         header.setShippingAddress(request.shippingAddress());
         header.setCustomerReference(request.customerReference());
         header.setTransportInformation(request.transportInformation());
-        csoMapper.insertHeader(header);
-
-        for (CsoDetailRequest item : request.items()) {
-            CsoDetailEntity detail = new CsoDetailEntity();
-            detail.setId(UUID.randomUUID().toString());
-            detail.setCsoId(header.getId());
-            detail.setItemCode(item.itemCode());
-            detail.setQty(item.qty());
-            detail.setUom(item.uom());
-            csoMapper.insertDetail(detail);
-        }
-
         return header;
     }
 
@@ -233,7 +249,14 @@ public class CsoService {
     }
 
     private String nextDocNo() {
-        return "CSO-" + String.format("%05d", sequence.getAndIncrement());
+        Long maxDocNo = csoMapper.findMaxDocNoNumber();
+        long nextNumber = (maxDocNo == null ? 0L : maxDocNo) + 1L;
+        return "CSO-" + String.format("%05d", nextNumber);
+    }
+
+    private boolean isDocNoConflict(DataIntegrityViolationException ex) {
+        String message = ex.getMostSpecificCause() != null ? ex.getMostSpecificCause().getMessage() : ex.getMessage();
+        return message != null && message.contains("cso_header_doc_no_key");
     }
 
     private String normalize(String value) {

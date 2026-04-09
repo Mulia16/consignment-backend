@@ -131,6 +131,12 @@
         WHERE id = #{id}
     </delete>
 
+    <select id="findMaxDocNoNumber" resultType="long">
+        SELECT COALESCE(MAX(CAST(SUBSTRING(doc_no FROM 5) AS BIGINT)), 0)
+        FROM cso_header
+        WHERE doc_no ~ '^CSO-[0-9]+$'
+    </select>
+
     <select id="countMatchingSetup" resultType="long">
         SELECT COUNT(*)
         FROM consignment_external_supplier external_supplier

@@ -105,6 +105,15 @@ public class GlobalExceptionHandler {
         public ResponseEntity<ApiResponse<Void>> handleDataIntegrity(DataIntegrityViolationException ex, HttpServletRequest request) {
         String detail = ex.getMostSpecificCause() != null ? ex.getMostSpecificCause().getMessage() : ex.getMessage();
         log.warn("[422] DataIntegrityViolation: {}", detail);
+            if (detail != null && detail.contains("cso_header_doc_no_key")) {
+                List<Map<String, String>> duplicateDocNoErrors = List.of(Map.of(
+                    "field", "docNo",
+                    "message", "Generated document number already exists, please retry",
+                    "value", "duplicate"
+                ));
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(new ApiResponse<>("Duplicate document number", 409, duplicateDocNoErrors, null, null));
+            }
         List<Map<String, String>> errors = List.of(Map.of(
             "field", "payload",
             "message", "Request violates database constraint: " + detail
