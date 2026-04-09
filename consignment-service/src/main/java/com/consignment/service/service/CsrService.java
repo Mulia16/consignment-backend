@@ -13,6 +13,7 @@ import com.consignment.service.persistence.mapper.CsrMapper;
 import com.consignment.service.persistence.mapper.InventoryMutationMapper;
 import com.consignment.service.persistence.model.CsrDetailEntity;
 import com.consignment.service.persistence.model.CsrHeaderEntity;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,7 +21,6 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicLong;
 
 @Service
 public class CsrService {
@@ -32,7 +32,6 @@ public class CsrService {
     private final CsrMapper csrMapper;
     private final InventoryMutationMapper inventoryMutationMapper;
     private final NotificationService notificationService;
-    private final AtomicLong sequence = new AtomicLong(1);
 
     public CsrService(
             CsrMapper csrMapper,
@@ -46,6 +45,36 @@ public class CsrService {
 
     @Transactional
     public CsrResponse create(CsrRequest request) {
+        CsrHeaderEntity header = null;
+        final int maxAttempts = 5;
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            header = buildHeader(request);
+            try {
+                csrMapper.insertHeader(header);
+                break;
+            } catch (DataIntegrityViolationException ex) {
+                if (isDocNoConflict(ex) && attempt < maxAttempts) {
+                    continue;
+                }
+                throw ex;
+            }
+        }
+
+        for (CsrDetailRequest item : request.items()) {
+            CsrDetailEntity detail = new CsrDetailEntity();
+            detail.setId(UUID.randomUUID().toString());
+            detail.setCsrId(header.getId());
+            detail.setItemCode(item.itemCode());
+            detail.setUom(item.uom());
+            detail.setQty(item.qty());
+            detail.setActualQty(item.actualQty());
+            csrMapper.insertDetail(detail);
+        }
+
+        return getById(header.getId());
+    }
+
+    private CsrHeaderEntity buildHeader(CsrRequest request) {
         CsrHeaderEntity header = new CsrHeaderEntity();
         header.setId(UUID.randomUUID().toString());
         header.setDocNo(nextDocNo());
@@ -60,20 +89,7 @@ public class CsrService {
         header.setStatus(STATUS_HELD);
         header.setCreatedBy(request.createdBy());
         header.setReferenceNo(request.referenceNo());
-        csrMapper.insertHeader(header);
-
-        for (CsrDetailRequest item : request.items()) {
-            CsrDetailEntity detail = new CsrDetailEntity();
-            detail.setId(UUID.randomUUID().toString());
-            detail.setCsrId(header.getId());
-            detail.setItemCode(item.itemCode());
-            detail.setUom(item.uom());
-            detail.setQty(item.qty());
-            detail.setActualQty(item.actualQty());
-            csrMapper.insertDetail(detail);
-        }
-
-        return getById(header.getId());
+        return header;
     }
 
     public record PagedResult(List<CsrResponse> items, PageMeta meta) {}
@@ -163,7 +179,14 @@ public class CsrService {
     }
 
     private String nextDocNo() {
-        return "CSR-" + String.format("%05d", sequence.getAndIncrement());
+        Long maxDocNo = csrMapper.findMaxDocNoNumber();
+        long nextNumber = (maxDocNo == null ? 0L : maxDocNo) + 1L;
+        return "CSR-" + String.format("%05d", nextNumber);
+    }
+
+    private boolean isDocNoConflict(DataIntegrityViolationException ex) {
+        String message = ex.getMostSpecificCause() != null ? ex.getMostSpecificCause().getMessage() : ex.getMessage();
+        return message != null && message.contains("csr_header_doc_no_key");
     }
 
     private String normalize(String value) {
