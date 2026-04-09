@@ -1,5 +1,7 @@
 package com.consignment.service.model.cso;
 
+import com.consignment.service.config.EmptyStringToNullLocalDateDeserializer;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
@@ -21,7 +23,7 @@ public record CsoRequest(
         @NotBlank String createdMethod,
         String referenceNo,
         String shippingTerm,
-        LocalDate deliveryDate,
+        @JsonDeserialize(using = EmptyStringToNullLocalDateDeserializer.class) LocalDate deliveryDate,
         String shippingMode,
         String transporter,
         String shippingTo,
