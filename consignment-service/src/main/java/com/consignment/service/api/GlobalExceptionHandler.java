@@ -2,11 +2,15 @@ package com.consignment.service.api;
 
 import com.consignment.service.exception.BusinessRuleViolationException;
 import com.consignment.service.exception.InvalidStateTransitionException;
+import com.consignment.service.exception.RequestValidationException;
 import com.consignment.service.exception.ResourceNotFoundException;
 import com.consignment.service.model.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -52,8 +56,33 @@ public class GlobalExceptionHandler {
                 .collect(Collectors.joining(", "));
         log.warn("[422] ValidationError: {}", summary);
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
-                .body(ApiResponse.error(422, summary));
+                .body(ApiResponse.validationError(errors));
     }
+
+        // 422 - request validation gagal dari service layer
+        @ExceptionHandler(RequestValidationException.class)
+        public ResponseEntity<ApiResponse<Void>> handleRequestValidation(RequestValidationException ex, HttpServletRequest request) {
+        String summary = ex.getErrors().stream()
+            .map(e -> e.get("field") + ": " + e.get("message"))
+            .collect(Collectors.joining(", "));
+        log.warn("[422] RequestValidationError: {}", summary);
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+            .body(new ApiResponse<>(ex.getMessage(), 422, ex.getErrors(), null, null));
+        }
+
+        // 422 - validation untuk @Validated di query/path/header
+        @ExceptionHandler(ConstraintViolationException.class)
+        public ResponseEntity<ApiResponse<Void>> handleConstraintViolation(ConstraintViolationException ex, HttpServletRequest request) {
+        List<Map<String, String>> errors = ex.getConstraintViolations().stream()
+            .map(this::toConstraintError)
+            .collect(Collectors.toList());
+        String summary = errors.stream()
+            .map(e -> e.get("field") + ": " + e.get("message"))
+            .collect(Collectors.joining(", "));
+        log.warn("[422] ConstraintViolation: {}", summary);
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+            .body(new ApiResponse<>("Validation failed", 422, errors, null, null));
+        }
 
     // 422 - business rule violation (item tidak terdaftar, status tidak valid, dll)
     @ExceptionHandler(BusinessRuleViolationException.class)
@@ -71,6 +100,19 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error(422, ex.getMessage()));
     }
 
+        // 422 - DB constraint violation (mis. unique/not-null/length)
+        @ExceptionHandler(DataIntegrityViolationException.class)
+        public ResponseEntity<ApiResponse<Void>> handleDataIntegrity(DataIntegrityViolationException ex, HttpServletRequest request) {
+        String detail = ex.getMostSpecificCause() != null ? ex.getMostSpecificCause().getMessage() : ex.getMessage();
+        log.warn("[422] DataIntegrityViolation: {}", detail);
+        List<Map<String, String>> errors = List.of(Map.of(
+            "field", "payload",
+            "message", "Request violates database constraint: " + detail
+        ));
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+            .body(new ApiResponse<>("Validation failed", 422, errors, null, null));
+        }
+
     // 500 - unexpected error
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGeneral(Exception ex, HttpServletRequest request) {
@@ -84,5 +126,13 @@ public class GlobalExceptionHandler {
         StringWriter sw = new StringWriter();
         ex.printStackTrace(new PrintWriter(sw));
         return sw.toString();
+    }
+
+    private Map<String, String> toConstraintError(ConstraintViolation<?> violation) {
+        String field = violation.getPropertyPath() == null ? "request" : violation.getPropertyPath().toString();
+        return Map.of(
+                "field", field,
+                "message", violation.getMessage()
+        );
     }
 }

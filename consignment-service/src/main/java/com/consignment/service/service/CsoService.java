@@ -1,6 +1,7 @@
 package com.consignment.service.service;
 
 import com.consignment.service.exception.BusinessRuleViolationException;
+import com.consignment.service.exception.RequestValidationException;
 import com.consignment.service.exception.ResourceNotFoundException;
 import com.consignment.service.model.PageMeta;
 import com.consignment.service.model.csdo.CsdoTransferRequest;
@@ -17,7 +18,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -45,8 +48,12 @@ public class CsoService {
 
     @Transactional
     public CsoResponse create(CsoRequest request) {
-        if (!isSetupValid(request)) {
-            throw new BusinessRuleViolationException("CSO items are not registered for supplier/contract/store in consignment setup");
+        List<Map<String, String>> setupErrors = validateSetup(request);
+        if (!setupErrors.isEmpty()) {
+            throw new RequestValidationException(
+                    "Validation failed for CSO item setup",
+                    setupErrors
+            );
         }
         CsoHeaderEntity header = persistHeaderAndDetails(request, STATUS_HELD);
         return getById(header.getId());
@@ -58,7 +65,7 @@ public class CsoService {
             throw new BusinessRuleViolationException("Auto-create CSO requires createdMethod = API");
         }
 
-        boolean validSetup = isSetupValid(request);
+        boolean validSetup = validateSetup(request).isEmpty();
         String status = validSetup ? STATUS_HELD : STATUS_ERROR;
 
         CsoHeaderEntity header = persistHeaderAndDetails(request, status);
@@ -180,8 +187,10 @@ public class CsoService {
         }
     }
 
-    private boolean isSetupValid(CsoRequest request) {
-        for (CsoDetailRequest item : request.items()) {
+    private List<Map<String, String>> validateSetup(CsoRequest request) {
+        List<Map<String, String>> errors = new ArrayList<>();
+        for (int i = 0; i < request.items().size(); i++) {
+            CsoDetailRequest item = request.items().get(i);
             long matches = csoMapper.countMatchingSetup(
                     item.itemCode(),
                     request.supplierCode(),
@@ -189,10 +198,15 @@ public class CsoService {
                     request.store()
             );
             if (matches <= 0) {
-                return false;
+                errors.add(Map.of(
+                        "field", "items[" + i + "].itemCode",
+                        "message", "Item is not registered for supplierCode=" + request.supplierCode()
+                                + ", supplierContract=" + request.supplierContract()
+                                + ", store=" + request.store()
+                ));
             }
         }
-        return true;
+        return errors;
     }
 
     private boolean isSetupValid(CsoHeaderEntity header, List<CsoDetailEntity> details) {
