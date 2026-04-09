@@ -9,12 +9,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestControllerAdvice
@@ -22,6 +25,7 @@ public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
+    // 404 - resource tidak ditemukan
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ApiResponse<Void>> handleNotFound(ResourceNotFoundException ex, HttpServletRequest request) {
         log.warn("[404] ResourceNotFound: {}", ex.getMessage());
@@ -29,30 +33,45 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error(404, ex.getMessage()));
     }
 
-    @ExceptionHandler(InvalidStateTransitionException.class)
-    public ResponseEntity<ApiResponse<Void>> handleInvalidState(InvalidStateTransitionException ex, HttpServletRequest request) {
-        log.warn("[400] InvalidStateTransition: {}", ex.getMessage());
+    // 400 - format/parsing error (JSON tidak valid, tipe data salah)
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiResponse<Void>> handleNotReadable(HttpMessageNotReadableException ex, HttpServletRequest request) {
+        log.warn("[400] MessageNotReadable: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.error(400, ex.getMessage()));
+                .body(ApiResponse.error(400, "Invalid request format: " + ex.getMostSpecificCause().getMessage()));
     }
 
-    @ExceptionHandler(BusinessRuleViolationException.class)
-    public ResponseEntity<ApiResponse<Void>> handleBusinessRule(BusinessRuleViolationException ex, HttpServletRequest request) {
-        log.warn("[400] BusinessRuleViolation: {}", ex.getMessage());
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.error(400, ex.getMessage()));
-    }
-
+    // 422 - field validation gagal (@NotBlank, @NotNull, dll)
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Void>> handleValidation(MethodArgumentNotValidException ex, HttpServletRequest request) {
-        String message = ex.getBindingResult().getFieldErrors().stream()
-                .map(f -> f.getField() + ": " + f.getDefaultMessage())
+        List<Map<String, String>> errors = ex.getBindingResult().getFieldErrors().stream()
+                .map(f -> Map.of("field", f.getField(), "message", f.getDefaultMessage()))
+                .collect(Collectors.toList());
+        String summary = errors.stream()
+                .map(e -> e.get("field") + ": " + e.get("message"))
                 .collect(Collectors.joining(", "));
-        log.warn("[400] ValidationError: {}", message);
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.error(400, message));
+        log.warn("[422] ValidationError: {}", summary);
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+                .body(ApiResponse.error(422, summary));
     }
 
+    // 422 - business rule violation (item tidak terdaftar, status tidak valid, dll)
+    @ExceptionHandler(BusinessRuleViolationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleBusinessRule(BusinessRuleViolationException ex, HttpServletRequest request) {
+        log.warn("[422] BusinessRuleViolation: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+                .body(ApiResponse.error(422, ex.getMessage()));
+    }
+
+    // 422 - state transition tidak valid
+    @ExceptionHandler(InvalidStateTransitionException.class)
+    public ResponseEntity<ApiResponse<Void>> handleInvalidState(InvalidStateTransitionException ex, HttpServletRequest request) {
+        log.warn("[422] InvalidStateTransition: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+                .body(ApiResponse.error(422, ex.getMessage()));
+    }
+
+    // 500 - unexpected error
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGeneral(Exception ex, HttpServletRequest request) {
         log.error("[500] Unexpected error: {}", ex.getMessage(), ex);
