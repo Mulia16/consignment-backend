@@ -5,6 +5,7 @@ import com.consignment.service.model.csr.CsrActualQtyUpdateRequest;
 import com.consignment.service.model.csr.CsrRequest;
 import com.consignment.service.model.csr.CsrResponse;
 import com.consignment.service.model.csr.CsrSearchCriteria;
+import com.consignment.service.model.csr.CsrUpdateRequest;
 import com.consignment.service.service.CsrService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -51,6 +52,13 @@ public class CsrController {
     public ResponseEntity<ApiResponse<CsrResponse>> create(@Valid @RequestBody CsrRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("CSR created", csrService.create(request)));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<ApiResponse<CsrResponse>> update(
+            @PathVariable String id,
+            @Valid @RequestBody CsrUpdateRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(csrService.update(id, request)));
     }
 
     @PutMapping("/{id}/release")

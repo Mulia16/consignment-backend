@@ -10,6 +10,7 @@ import com.consignment.service.model.cso.CsoRequest;
 import com.consignment.service.model.cso.CsoResponse;
 import com.consignment.service.model.cso.CsoResponseDetail;
 import com.consignment.service.model.cso.CsoSearchCriteria;
+import com.consignment.service.model.cso.CsoUpdateRequest;
 import com.consignment.service.persistence.mapper.CsoMapper;
 import com.consignment.service.persistence.mapper.ReservationMapper;
 import com.consignment.service.persistence.model.CsoDetailEntity;
@@ -43,6 +44,39 @@ public class CsoService {
         this.csoMapper = csoMapper;
         this.reservationMapper = reservationMapper;
         this.csdoService = csdoService;
+    }
+
+    @Transactional
+    public CsoResponse update(String id, CsoUpdateRequest request) {
+        CsoHeaderEntity header = loadHeader(id);
+        if (!STATUS_HELD.equalsIgnoreCase(header.getStatus())) {
+            throw new BusinessRuleViolationException("Only CSO with status HELD can be updated");
+        }
+        header.setCustomerBranch(request.customerBranch());
+        header.setCustomerEmail(request.customerEmail());
+        header.setNote(request.note());
+        header.setReferenceNo(request.referenceNo());
+        header.setShippingTerm(request.shippingTerm());
+        header.setDeliveryDate(request.deliveryDate());
+        header.setShippingMode(request.shippingMode());
+        header.setTransporter(request.transporter());
+        header.setShippingTo(request.shippingTo());
+        header.setShippingAddress(request.shippingAddress());
+        header.setCustomerReference(request.customerReference());
+        header.setTransportInformation(request.transportInformation());
+        csoMapper.updateHeader(header);
+
+        csoMapper.deleteDetails(id);
+        for (CsoDetailRequest item : request.items()) {
+            CsoDetailEntity detail = new CsoDetailEntity();
+            detail.setId(UUID.randomUUID().toString());
+            detail.setCsoId(id);
+            detail.setItemCode(item.itemCode());
+            detail.setQty(item.qty());
+            detail.setUom(item.uom());
+            csoMapper.insertDetail(detail);
+        }
+        return getById(id);
     }
 
     @Transactional

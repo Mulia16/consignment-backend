@@ -9,6 +9,7 @@ import com.consignment.service.model.csr.CsrRequest;
 import com.consignment.service.model.csr.CsrResponse;
 import com.consignment.service.model.csr.CsrResponseDetail;
 import com.consignment.service.model.csr.CsrSearchCriteria;
+import com.consignment.service.model.csr.CsrUpdateRequest;
 import com.consignment.service.persistence.mapper.CsrMapper;
 import com.consignment.service.persistence.mapper.InventoryMutationMapper;
 import com.consignment.service.persistence.model.CsrDetailEntity;
@@ -41,6 +42,35 @@ public class CsrService {
         this.csrMapper = csrMapper;
         this.inventoryMutationMapper = inventoryMutationMapper;
         this.notificationService = notificationService;
+    }
+
+    @Transactional
+    public CsrResponse update(String id, CsrUpdateRequest request) {
+        CsrHeaderEntity header = csrMapper.findHeaderById(id);
+        if (header == null) throw new ResourceNotFoundException("CSR not found: " + id);
+        if (!STATUS_HELD.equalsIgnoreCase(header.getStatus())) {
+            throw new BusinessRuleViolationException("Only CSR with status HELD can be updated");
+        }
+        header.setInternalSupplierStore(request.internalSupplierStore());
+        header.setSupplierConfirmNote(request.supplierConfirmNote());
+        header.setReasonCode(request.reasonCode());
+        header.setRemark(request.remark());
+        header.setReferenceNo(request.referenceNo());
+        if (request.csoDocNo() != null) header.setCsoDocNo(request.csoDocNo());
+        csrMapper.updateHeader(header);
+
+        csrMapper.deleteDetails(id);
+        for (CsrDetailRequest item : request.items()) {
+            CsrDetailEntity detail = new CsrDetailEntity();
+            detail.setId(UUID.randomUUID().toString());
+            detail.setCsrId(id);
+            detail.setItemCode(item.itemCode());
+            detail.setUom(item.uom());
+            detail.setQty(item.qty());
+            detail.setActualQty(item.actualQty());
+            csrMapper.insertDetail(detail);
+        }
+        return getById(id);
     }
 
     @Transactional

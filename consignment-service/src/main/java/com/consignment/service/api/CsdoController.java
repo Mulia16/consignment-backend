@@ -4,6 +4,7 @@ import com.consignment.service.model.ApiResponse;
 import com.consignment.service.model.csdo.CsdoResponse;
 import com.consignment.service.model.csdo.CsdoSearchCriteria;
 import com.consignment.service.model.csdo.CsdoTransferRequest;
+import com.consignment.service.model.csdo.CsdoUpdateRequest;
 import com.consignment.service.service.CsdoService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -54,6 +55,13 @@ public class CsdoController {
     @PutMapping("/{id}/release")
     public ResponseEntity<ApiResponse<CsdoResponse>> release(@PathVariable String id) {
         return ResponseEntity.ok(ApiResponse.success(csdoService.release(id)));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<ApiResponse<CsdoResponse>> update(
+            @PathVariable String id,
+            @Valid @RequestBody CsdoUpdateRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(csdoService.update(id, request)));
     }
 
     @PutMapping("/{id}/reverse")

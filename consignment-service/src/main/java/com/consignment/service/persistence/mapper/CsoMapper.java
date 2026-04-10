@@ -20,6 +20,8 @@ public interface CsoMapper {
     void updateHeaderStatus(@Param("id") String id, @Param("status") String status,
                             @Param("releasedAt") Instant releasedAt, @Param("releasedBy") String releasedBy);
     int deleteHeader(@Param("id") String id);
+    void updateHeader(CsoHeaderEntity header);
+    void deleteDetails(@Param("csoId") String csoId);
     Long findMaxDocNoNumber();
     long countMatchingSetup(@Param("itemCode") String itemCode, @Param("supplierCode") String supplierCode,
                             @Param("supplierContract") String supplierContract, @Param("store") String store);

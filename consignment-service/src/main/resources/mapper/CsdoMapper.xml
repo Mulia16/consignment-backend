@@ -121,4 +121,13 @@
         FROM csdo_header
         WHERE doc_no ~ '^CSDO-[0-9]+$'
     </select>
+
+    <update id="updateHeader" parameterType="com.consignment.service.persistence.model.CsdoHeaderEntity">
+        UPDATE csdo_header SET
+            require_generate_cdo = #{requireGenerateCdo},
+            shipping_mode        = #{shippingMode},
+            transporter          = #{transporter},
+            updated_at           = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
 </mapper>

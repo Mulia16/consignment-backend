@@ -4,6 +4,7 @@ import com.consignment.service.model.ApiResponse;
 import com.consignment.service.model.cso.CsoRequest;
 import com.consignment.service.model.cso.CsoResponse;
 import com.consignment.service.model.cso.CsoSearchCriteria;
+import com.consignment.service.model.cso.CsoUpdateRequest;
 import com.consignment.service.service.CsoService;
 import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -49,6 +50,13 @@ public class CsoController {
     public ResponseEntity<ApiResponse<CsoResponse>> create(@Valid @RequestBody CsoRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("CSO created", csoService.create(request)));
+    }
+
+    @PutMapping("/api/cso/{id}")
+    public ResponseEntity<ApiResponse<CsoResponse>> update(
+            @PathVariable String id,
+            @Valid @RequestBody CsoUpdateRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(csoService.update(id, request)));
     }
 
     @GetMapping("/api/cso/{id}")

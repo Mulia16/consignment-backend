@@ -118,4 +118,19 @@
         FROM csrv_header
         WHERE doc_no ~ '^CSRV-[0-9]+$'
     </select>
+
+    <update id="updateHeader" parameterType="com.consignment.service.persistence.model.CsrvHeaderEntity">
+        UPDATE csrv_header SET
+            branch          = #{branch},
+            supplier_do_no  = #{supplierDoNo},
+            delivery_date   = #{deliveryDate},
+            remark          = #{remark},
+            reference_no    = #{referenceNo},
+            updated_at      = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteDetails">
+        DELETE FROM csrv_detail WHERE csrv_id = #{csrvId}
+    </delete>
 </mapper>

@@ -22,5 +22,7 @@ public interface CsrMapper {
     void updateHeaderStatus(@Param("id") String id, @Param("status") String status,
                             @Param("releasedAt") Instant releasedAt, @Param("completedAt") Instant completedAt);
     void updateActualQty(@Param("detailId") String detailId, @Param("actualQty") BigDecimal actualQty);
+    void updateHeader(CsrHeaderEntity header);
+    void deleteDetails(@Param("csrId") String csrId);
     Long findMaxDocNoNumber();
 }

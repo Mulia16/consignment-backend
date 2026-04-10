@@ -19,6 +19,8 @@ public interface CsrqMapper {
     List<CsrqDetailEntity> findDetailsByHeaderId(@Param("csrqId") String csrqId);
     void updateHeaderStatus(@Param("id") String id, @Param("status") String status, @Param("releasedAt") Instant releasedAt);
     int deleteHeader(@Param("id") String id);
+    void updateHeader(CsrqHeaderEntity header);
+    void deleteDetails(@Param("csrqId") String csrqId);
     long countMatchingSetup(@Param("itemCode") String itemCode, @Param("supplierCode") String supplierCode,
                             @Param("supplierContract") String supplierContract, @Param("store") String store,
                             @Param("internalSupplierStore") String internalSupplierStore);

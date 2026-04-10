@@ -4,6 +4,7 @@ import com.consignment.service.model.ApiResponse;
 import com.consignment.service.model.csrq.CsrqRequest;
 import com.consignment.service.model.csrq.CsrqResponse;
 import com.consignment.service.model.csrq.CsrqSearchCriteria;
+import com.consignment.service.model.csrq.CsrqUpdateRequest;
 import com.consignment.service.service.CsrqService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -46,6 +47,13 @@ public class CsrqController {
     public ResponseEntity<ApiResponse<CsrqResponse>> create(@Valid @RequestBody CsrqRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("CSRQ created", csrqService.create(request)));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<ApiResponse<CsrqResponse>> update(
+            @PathVariable String id,
+            @Valid @RequestBody CsrqUpdateRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(csrqService.update(id, request)));
     }
 
     @GetMapping("/{id}")

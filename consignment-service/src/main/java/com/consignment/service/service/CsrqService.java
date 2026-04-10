@@ -8,6 +8,7 @@ import com.consignment.service.model.csrq.CsrqRequest;
 import com.consignment.service.model.csrq.CsrqResponse;
 import com.consignment.service.model.csrq.CsrqResponseDetail;
 import com.consignment.service.model.csrq.CsrqSearchCriteria;
+import com.consignment.service.model.csrq.CsrqUpdateRequest;
 import com.consignment.service.persistence.mapper.CsrqMapper;
 import com.consignment.service.persistence.model.CsrqDetailEntity;
 import com.consignment.service.persistence.model.CsrqHeaderEntity;
@@ -30,6 +31,31 @@ public class CsrqService {
     public CsrqService(CsrqMapper csrqMapper, NotificationService notificationService) {
         this.csrqMapper = csrqMapper;
         this.notificationService = notificationService;
+    }
+
+    @Transactional
+    public CsrqResponse update(String id, CsrqUpdateRequest request) {
+        CsrqHeaderEntity header = loadHeader(id);
+        if (!STATUS_HELD.equalsIgnoreCase(header.getStatus())) {
+            throw new BusinessRuleViolationException("Only CSRQ with status HELD can be updated");
+        }
+        header.setBranch(request.branch());
+        header.setInternalSupplierStore(request.internalSupplierStore());
+        header.setNotes(request.notes());
+        header.setReferenceNo(request.referenceNo());
+        csrqMapper.updateHeader(header);
+
+        csrqMapper.deleteDetails(id);
+        for (CsrqDetailRequest item : request.items()) {
+            CsrqDetailEntity detail = new CsrqDetailEntity();
+            detail.setId(UUID.randomUUID().toString());
+            detail.setCsrqId(id);
+            detail.setItemCode(item.itemCode());
+            detail.setRequestQty(item.requestQty());
+            detail.setRequestUom(item.requestUom());
+            csrqMapper.insertDetail(detail);
+        }
+        return getById(id);
     }
 
     @Transactional

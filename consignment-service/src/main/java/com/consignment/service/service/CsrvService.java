@@ -8,6 +8,7 @@ import com.consignment.service.model.csrv.CsrvRequest;
 import com.consignment.service.model.csrv.CsrvResponse;
 import com.consignment.service.model.csrv.CsrvResponseDetail;
 import com.consignment.service.model.csrv.CsrvSearchCriteria;
+import com.consignment.service.model.csrv.CsrvUpdateRequest;
 import com.consignment.service.persistence.mapper.CsrvMapper;
 import com.consignment.service.persistence.mapper.SupplierBookValueInventoryMapper;
 import com.consignment.service.persistence.model.CsrvDetailEntity;
@@ -35,6 +36,33 @@ public class CsrvService {
     ) {
         this.csrvMapper = csrvMapper;
         this.supplierBookValueInventoryMapper = supplierBookValueInventoryMapper;
+    }
+
+    @Transactional
+    public CsrvResponse update(String id, CsrvUpdateRequest request) {
+        CsrvHeaderEntity header = loadHeader(id);
+        if (!STATUS_HELD.equalsIgnoreCase(header.getStatus())) {
+            throw new BusinessRuleViolationException("Only CSRV with status HELD can be updated");
+        }
+        header.setBranch(request.branch());
+        header.setSupplierDoNo(request.supplierDoNo());
+        header.setDeliveryDate(request.deliveryDate());
+        header.setRemark(request.remark());
+        header.setReferenceNo(request.referenceNo());
+        csrvMapper.updateHeader(header);
+
+        csrvMapper.deleteDetails(id);
+        for (CsrvDetailRequest item : request.items()) {
+            CsrvDetailEntity detail = new CsrvDetailEntity();
+            detail.setId(UUID.randomUUID().toString());
+            detail.setCsrvId(id);
+            detail.setItemCode(item.itemCode());
+            detail.setAvailableQty(item.availableQty());
+            detail.setRequestQty(item.requestQty());
+            detail.setReceivingQty(item.receivingQty());
+            csrvMapper.insertDetail(detail);
+        }
+        return getById(id);
     }
 
     @Transactional

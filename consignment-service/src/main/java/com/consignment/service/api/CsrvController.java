@@ -4,6 +4,7 @@ import com.consignment.service.model.ApiResponse;
 import com.consignment.service.model.csrv.CsrvRequest;
 import com.consignment.service.model.csrv.CsrvResponse;
 import com.consignment.service.model.csrv.CsrvSearchCriteria;
+import com.consignment.service.model.csrv.CsrvUpdateRequest;
 import com.consignment.service.service.CsrvService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -46,6 +47,13 @@ public class CsrvController {
     public ResponseEntity<ApiResponse<CsrvResponse>> create(@Valid @RequestBody CsrvRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("CSRV created", csrvService.create(request)));
+    }
+
+    @PutMapping("/api/csrv/{id}")
+    public ResponseEntity<ApiResponse<CsrvResponse>> update(
+            @PathVariable String id,
+            @Valid @RequestBody CsrvUpdateRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(csrvService.update(id, request)));
     }
 
     @GetMapping("/api/csrv/{id}")

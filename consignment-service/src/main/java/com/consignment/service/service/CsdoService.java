@@ -7,6 +7,7 @@ import com.consignment.service.model.csdo.CsdoResponse;
 import com.consignment.service.model.csdo.CsdoResponseDetail;
 import com.consignment.service.model.csdo.CsdoSearchCriteria;
 import com.consignment.service.model.csdo.CsdoTransferRequest;
+import com.consignment.service.model.csdo.CsdoUpdateRequest;
 import com.consignment.service.persistence.mapper.CsoMapper;
 import com.consignment.service.persistence.mapper.CsdoMapper;
 import com.consignment.service.persistence.mapper.InventoryMutationMapper;
@@ -48,6 +49,20 @@ public class CsdoService {
         this.csoMapper = csoMapper;
         this.reservationMapper = reservationMapper;
         this.inventoryMutationMapper = inventoryMutationMapper;
+    }
+
+    @Transactional
+    public CsdoResponse update(String id, CsdoUpdateRequest request) {
+        CsdoHeaderEntity header = csdoMapper.findHeaderById(id);
+        if (header == null) throw new ResourceNotFoundException("CSDO not found: " + id);
+        if (!STATUS_HELD.equalsIgnoreCase(header.getStatus())) {
+            throw new BusinessRuleViolationException("Only CSDO with status HELD can be updated");
+        }
+        header.setRequireGenerateCdo(request.requireGenerateCdo());
+        header.setShippingMode(request.shippingMode());
+        header.setTransporter(request.transporter());
+        csdoMapper.updateHeader(header);
+        return getById(id);
     }
 
     @Transactional

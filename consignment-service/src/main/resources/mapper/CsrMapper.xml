@@ -127,4 +127,20 @@
         FROM csr_header
         WHERE doc_no ~ '^CSR-[0-9]+$'
     </select>
+
+    <update id="updateHeader" parameterType="com.consignment.service.persistence.model.CsrHeaderEntity">
+        UPDATE csr_header SET
+            internal_supplier_store = #{internalSupplierStore},
+            supplier_confirm_note   = #{supplierConfirmNote},
+            reason_code             = #{reasonCode},
+            remark                  = #{remark},
+            reference_no            = #{referenceNo},
+            cso_doc_no              = #{csoDocNo},
+            updated_at              = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteDetails">
+        DELETE FROM csr_detail WHERE csr_id = #{csrId}
+    </delete>
 </mapper>

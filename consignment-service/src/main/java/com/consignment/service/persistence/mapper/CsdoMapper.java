@@ -20,5 +20,6 @@ public interface CsdoMapper {
     long countHeaders(@Param("c") CsdoSearchCriteria criteria);
     List<CsdoDetailEntity> findDetailsByHeaderId(@Param("csdoId") String csdoId);
     void updateHeaderStatus(@Param("id") String id, @Param("status") String status, @Param("releasedAt") Instant releasedAt);
+    void updateHeader(CsdoHeaderEntity header);
     Long findMaxDocNoNumber();
 }

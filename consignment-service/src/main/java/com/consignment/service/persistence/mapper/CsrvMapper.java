@@ -18,6 +18,8 @@ public interface CsrvMapper {
     long countHeaders(@Param("c") CsrvSearchCriteria criteria);
     List<CsrvDetailEntity> findDetailsByHeaderId(@Param("csrvId") String csrvId);
     void updateHeaderStatus(@Param("id") String id, @Param("status") String status, @Param("releasedAt") Instant releasedAt);
+    void updateHeader(CsrvHeaderEntity header);
+    void deleteDetails(@Param("csrvId") String csrvId);
     long countMatchingSetup(@Param("itemCode") String itemCode, @Param("supplierCode") String supplierCode,
                             @Param("supplierContract") String supplierContract, @Param("receivingStore") String receivingStore);
     Long findMaxDocNoNumber();
