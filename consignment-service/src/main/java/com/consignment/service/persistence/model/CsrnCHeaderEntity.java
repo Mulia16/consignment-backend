@@ -12,10 +12,13 @@ public class CsrnCHeaderEntity {
     private String store;
     private String supplierCode;
     private String supplierContract;
+    private String internalSupplierStore;
     private String reasonCode;
     private String remark;
     private String createdBy;
+    private String status;
     private Instant createdAt;
+    private Instant updatedAt;
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
@@ -35,12 +38,18 @@ public class CsrnCHeaderEntity {
     public void setSupplierCode(String supplierCode) { this.supplierCode = supplierCode; }
     public String getSupplierContract() { return supplierContract; }
     public void setSupplierContract(String supplierContract) { this.supplierContract = supplierContract; }
+    public String getInternalSupplierStore() { return internalSupplierStore; }
+    public void setInternalSupplierStore(String internalSupplierStore) { this.internalSupplierStore = internalSupplierStore; }
     public String getReasonCode() { return reasonCode; }
     public void setReasonCode(String reasonCode) { this.reasonCode = reasonCode; }
     public String getRemark() { return remark; }
     public void setRemark(String remark) { this.remark = remark; }
     public String getCreatedBy() { return createdBy; }
     public void setCreatedBy(String createdBy) { this.createdBy = createdBy; }
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
     public Instant getCreatedAt() { return createdAt; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
+    public Instant getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(Instant updatedAt) { this.updatedAt = updatedAt; }
 }

@@ -11,6 +11,7 @@ public record CsrnCSearchCriteria(
         String reasonCode,
         String createdBy,
         String csrnDocNo,
+        String status,
         LocalDate createdFrom,
         LocalDate createdTo,
         int page,

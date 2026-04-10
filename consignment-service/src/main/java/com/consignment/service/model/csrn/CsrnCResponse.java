@@ -16,7 +16,9 @@ public record CsrnCResponse(
         String reasonCode,
         String remark,
         String createdBy,
+        String status,
         Instant createdAt,
-        List<CsrnResponseDetail> items
+        Instant updatedAt,
+        List<CsrnCResponseDetail> items
 ) {
 }

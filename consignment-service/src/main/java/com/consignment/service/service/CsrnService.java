@@ -93,15 +93,15 @@ public class CsrnService {
         if (cHeader == null) {
             throw new ResourceNotFoundException("CSRN-C not found for CSRN: " + csrnId);
         }
-        List<CsrnResponseDetail> items = csrnMapper.findCDetailsByCHeaderId(cHeader.getId()).stream()
-                .map(d -> new CsrnResponseDetail(d.getId(), d.getItemCode(), d.getUom(), d.getQty()))
+        List<CsrnCResponseDetail> items = csrnMapper.findCDetailsByCHeaderId(cHeader.getId()).stream()
+                .map(d -> new CsrnCResponseDetail(d.getId(), d.getItemCode(), d.getUom(), d.getQty(), d.getActualQty()))
                 .toList();
         return new CsrnCResponse(
                 cHeader.getId(), cHeader.getDocNo(), cHeader.getCsrnId(), cHeader.getCsrnDocNo(),
                 cHeader.getCsoDocNo(), cHeader.getCompany(), cHeader.getStore(),
                 cHeader.getSupplierCode(), cHeader.getSupplierContract(),
                 cHeader.getReasonCode(), cHeader.getRemark(), cHeader.getCreatedBy(),
-                cHeader.getCreatedAt(), items
+                cHeader.getStatus(), cHeader.getCreatedAt(), cHeader.getUpdatedAt(), items
         );
     }
 
@@ -118,6 +118,7 @@ public class CsrnService {
         cHeader.setStore(header.getStore());
         cHeader.setSupplierCode(header.getSupplierCode());
         cHeader.setSupplierContract(header.getSupplierContract());
+        cHeader.setInternalSupplierStore(header.getInternalSupplierStore());
         cHeader.setReasonCode(header.getReasonCode());
         cHeader.setRemark(header.getRemark());
         cHeader.setCreatedBy(header.getCreatedBy());

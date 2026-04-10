@@ -32,5 +32,7 @@ public interface CsrnMapper {
     List<CsrnCHeaderEntity> searchCHeaders(@Param("c") CsrnCSearchCriteria criteria);
     long countCHeaders(@Param("c") CsrnCSearchCriteria criteria);
     List<CsrnCDetailEntity> findCDetailsByCHeaderId(@Param("csrnCId") String csrnCId);
+    void updateCActualQty(@Param("detailId") String detailId, @Param("actualQty") java.math.BigDecimal actualQty);
+    void updateCStatus(@Param("id") String id, @Param("status") String status);
     Long findMaxCDocNoNumber();
 }
