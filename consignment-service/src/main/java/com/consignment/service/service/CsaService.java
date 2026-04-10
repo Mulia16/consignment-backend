@@ -19,7 +19,6 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicLong;
 
 @Service
 public class CsaService {
@@ -35,7 +34,6 @@ public class CsaService {
 
     private final CsaMapper csaMapper;
     private final InventoryMutationMapper inventoryMutationMapper;
-    private final AtomicLong sequence = new AtomicLong(1);
 
     public CsaService(CsaMapper csaMapper, InventoryMutationMapper inventoryMutationMapper) {
         this.csaMapper = csaMapper;
@@ -166,7 +164,8 @@ public class CsaService {
     }
 
     private String nextDocNo() {
-        return "CSA-" + String.format("%05d", sequence.getAndIncrement());
+        Long max = csaMapper.findMaxDocNoNumber();
+        return "CSA-" + String.format("%05d", (max == null ? 0L : max) + 1L);
     }
 
     private String normalize(String value) {

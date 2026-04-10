@@ -17,7 +17,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicLong;
 
 @Service
 public class CsrqService {
@@ -27,7 +26,6 @@ public class CsrqService {
 
     private final CsrqMapper csrqMapper;
     private final NotificationService notificationService;
-    private final AtomicLong sequence = new AtomicLong(1);
 
     public CsrqService(CsrqMapper csrqMapper, NotificationService notificationService) {
         this.csrqMapper = csrqMapper;
@@ -129,7 +127,8 @@ public class CsrqService {
     }
 
     private String nextDocNo() {
-        return "CSRQ-" + String.format("%05d", sequence.getAndIncrement());
+        Long max = csrqMapper.findMaxDocNoNumber();
+        return "CSRQ-" + String.format("%05d", (max == null ? 0L : max) + 1L);
     }
 
     private String normalize(String value) {

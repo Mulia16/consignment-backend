@@ -112,4 +112,10 @@
           AND external_supplier.supplier_contract = #{supplierContract}
           AND external_supplier.consignee_store = #{receivingStore}
     </select>
+
+    <select id="findMaxDocNoNumber" resultType="long">
+        SELECT COALESCE(MAX(CAST(SUBSTRING(doc_no FROM 6) AS BIGINT)), 0)
+        FROM csrv_header
+        WHERE doc_no ~ '^CSRV-[0-9]+$'
+    </select>
 </mapper>

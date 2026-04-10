@@ -112,4 +112,10 @@
             updated_at = CURRENT_TIMESTAMP
         WHERE id = #{id}
     </update>
+
+    <select id="findMaxDocNoNumber" resultType="long">
+        SELECT COALESCE(MAX(CAST(SUBSTRING(doc_no FROM 5) AS BIGINT)), 0)
+        FROM csa_header
+        WHERE doc_no ~ '^CSA-[0-9]+$'
+    </select>
 </mapper>

@@ -128,4 +128,10 @@
               </choose>
         )
     </select>
+
+    <select id="findMaxDocNoNumber" resultType="long">
+        SELECT COALESCE(MAX(CAST(SUBSTRING(doc_no FROM 6) AS BIGINT)), 0)
+        FROM csrq_header
+        WHERE doc_no ~ '^CSRQ-[0-9]+$'
+    </select>
 </mapper>

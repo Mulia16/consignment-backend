@@ -22,4 +22,5 @@ public interface CsrqMapper {
     long countMatchingSetup(@Param("itemCode") String itemCode, @Param("supplierCode") String supplierCode,
                             @Param("supplierContract") String supplierContract, @Param("store") String store,
                             @Param("internalSupplierStore") String internalSupplierStore);
+    Long findMaxDocNoNumber();
 }

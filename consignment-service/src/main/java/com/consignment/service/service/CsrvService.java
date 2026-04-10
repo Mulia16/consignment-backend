@@ -18,7 +18,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicLong;
 
 @Service
 public class CsrvService {
@@ -29,7 +28,6 @@ public class CsrvService {
 
     private final CsrvMapper csrvMapper;
     private final SupplierBookValueInventoryMapper supplierBookValueInventoryMapper;
-    private final AtomicLong sequence = new AtomicLong(1);
 
     public CsrvService(
             CsrvMapper csrvMapper,
@@ -148,7 +146,8 @@ public class CsrvService {
     }
 
     private String nextDocNo() {
-        return "CSRV-" + String.format("%05d", sequence.getAndIncrement());
+        Long max = csrvMapper.findMaxDocNoNumber();
+        return "CSRV-" + String.format("%05d", (max == null ? 0L : max) + 1L);
     }
 
     private String normalize(String value) {

@@ -20,4 +20,5 @@ public interface CsaMapper {
     List<CsaDetailEntity> findDetailsByHeaderId(@Param("csaId") String csaId);
     void updateHeaderStatus(@Param("id") String id, @Param("status") String status,
                             @Param("releasedAt") Instant releasedAt, @Param("releasedBy") String releasedBy);
+    Long findMaxDocNoNumber();
 }

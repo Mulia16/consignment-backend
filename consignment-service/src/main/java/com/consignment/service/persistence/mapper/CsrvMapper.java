@@ -20,4 +20,5 @@ public interface CsrvMapper {
     void updateHeaderStatus(@Param("id") String id, @Param("status") String status, @Param("releasedAt") Instant releasedAt);
     long countMatchingSetup(@Param("itemCode") String itemCode, @Param("supplierCode") String supplierCode,
                             @Param("supplierContract") String supplierContract, @Param("receivingStore") String receivingStore);
+    Long findMaxDocNoNumber();
 }

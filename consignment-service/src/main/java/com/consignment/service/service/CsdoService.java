@@ -21,7 +21,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicLong;
 
 @Service
 public class CsdoService {
@@ -38,7 +37,6 @@ public class CsdoService {
     private final CsoMapper csoMapper;
     private final ReservationMapper reservationMapper;
     private final InventoryMutationMapper inventoryMutationMapper;
-    private final AtomicLong sequence = new AtomicLong(1);
 
     public CsdoService(
             CsdoMapper csdoMapper,
@@ -198,7 +196,8 @@ public class CsdoService {
     }
 
     private String nextDocNo() {
-        return "CSDO-" + String.format("%05d", sequence.getAndIncrement());
+        Long max = csdoMapper.findMaxDocNoNumber();
+        return "CSDO-" + String.format("%05d", (max == null ? 0L : max) + 1L);
     }
 
     private String normalize(String value) {

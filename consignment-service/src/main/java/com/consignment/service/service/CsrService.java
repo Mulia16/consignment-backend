@@ -89,6 +89,7 @@ public class CsrService {
         header.setStatus(STATUS_HELD);
         header.setCreatedBy(request.createdBy());
         header.setReferenceNo(request.referenceNo());
+        header.setCsoDocNo(request.csoDocNo());
         return header;
     }
 
@@ -218,6 +219,7 @@ public class CsrService {
                 header.getStatus(),
                 header.getCreatedBy(),
                 header.getReferenceNo(),
+                header.getCsoDocNo(),
                 header.getReleasedAt(),
                 header.getCompletedAt(),
                 header.getCreatedAt(),
