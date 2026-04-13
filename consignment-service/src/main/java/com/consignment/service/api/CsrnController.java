@@ -4,14 +4,10 @@ import com.consignment.service.model.ApiResponse;
 import com.consignment.service.model.csrn.*;
 import com.consignment.service.service.CsrnService;
 import jakarta.validation.Valid;
-import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -19,11 +15,9 @@ import java.util.List;
 public class CsrnController {
 
     private final CsrnService csrnService;
-    private final CsrnSlipService csrnSlipService;
 
-    public CsrnController(CsrnService csrnService, CsrnSlipService csrnSlipService) {
+    public CsrnController(CsrnService csrnService) {
         this.csrnService = csrnService;
-        this.csrnSlipService = csrnSlipService;
     }
 
     @GetMapping
@@ -32,17 +26,18 @@ public class CsrnController {
             @RequestParam(required = false) String company,
             @RequestParam(required = false) String store,
             @RequestParam(required = false) String supplierCode,
-            @RequestParam(required = false) String csoDocNo,
+            @RequestParam(required = false) String supplierContract,
+            @RequestParam(required = false) String internalSupplierStore,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String createdBy,
+            @RequestParam(required = false) String referenceNo,
+            @RequestParam(required = false) String reasonCode,
             @RequestParam(required = false) String itemCode,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate updatedFrom,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate updatedTo,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int perPage) {
         var result = csrnService.search(new CsrnSearchCriteria(
-                docNo, company, store, supplierCode, csoDocNo, status, createdBy, itemCode,
-                updatedFrom, updatedTo, page, perPage));
+                docNo, company, store, supplierCode, supplierContract, internalSupplierStore,
+                status, createdBy, referenceNo, reasonCode, itemCode, page, perPage));
         return ResponseEntity.ok(ApiResponse.paginated(result.items(), result.meta()));
     }
 
@@ -57,27 +52,26 @@ public class CsrnController {
                 .body(ApiResponse.success("CSRN created", csrnService.create(request)));
     }
 
-    /** Update CSRN (only HELD). Auto-creates CSRN-C snapshot and sets status to UPDATED */
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<CsrnResponse>> update(
-            @PathVariable String id,
-            @Valid @RequestBody CsrnUpdateRequest request) {
+            @PathVariable String id, @Valid @RequestBody CsrnUpdateRequest request) {
         return ResponseEntity.ok(ApiResponse.success(csrnService.update(id, request)));
     }
 
-    /** Get CSRN-C (auto-created snapshot) for a given CSRN */
-    @GetMapping("/{id}/csrn-c")
-    public ResponseEntity<ApiResponse<CsrnCResponse>> getCsrnC(@PathVariable String id) {
-        return ResponseEntity.ok(ApiResponse.success(csrnService.getCsrnC(id)));
+    @PutMapping("/{id}/release")
+    public ResponseEntity<ApiResponse<CsrnResponse>> release(@PathVariable String id) {
+        return ResponseEntity.ok(ApiResponse.success(csrnService.release(id)));
     }
 
-    /** Print slip PDF — only available for UPDATED status */
-    @GetMapping("/{id}/slip")
-    public ResponseEntity<byte[]> printSlip(@PathVariable String id) {
-        byte[] pdf = csrnSlipService.generateSlip(id);
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"CSRN-slip-" + id + ".pdf\"")
-                .contentType(MediaType.APPLICATION_PDF)
-                .body(pdf);
+    @PutMapping("/{id}/detail/{detailId}/actual-qty")
+    public ResponseEntity<ApiResponse<CsrnResponse>> updateActualQty(
+            @PathVariable String id, @PathVariable String detailId,
+            @Valid @RequestBody CsrnActualQtyUpdateRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(csrnService.updateActualQty(id, detailId, request)));
+    }
+
+    @PutMapping("/{id}/complete")
+    public ResponseEntity<ApiResponse<CsrnResponse>> complete(@PathVariable String id) {
+        return ResponseEntity.ok(ApiResponse.success(csrnService.complete(id)));
     }
 }

@@ -15,7 +15,7 @@ public class NoOpNotificationService implements NotificationService {
     }
 
     @Override
-    public void sendCsrReleased(String docNo, String supplierCode) {
-        LOGGER.info("CSR release notification queued. docNo={}, supplierCode={}", docNo, supplierCode);
+    public void sendCsrnReleased(String docNo, String supplierCode) {
+        LOGGER.info("CSRN release notification queued. docNo={}, supplierCode={}", docNo, supplierCode);
     }
 }

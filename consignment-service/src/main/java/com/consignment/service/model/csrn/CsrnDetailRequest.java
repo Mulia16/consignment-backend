@@ -9,6 +9,7 @@ import java.math.BigDecimal;
 public record CsrnDetailRequest(
         @NotBlank String itemCode,
         @NotBlank String uom,
-        @NotNull @DecimalMin("0.0001") BigDecimal qty
+        @NotNull @DecimalMin(value = "0.0001") BigDecimal qty,
+        BigDecimal actualQty
 ) {
 }

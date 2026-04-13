@@ -12,7 +12,7 @@ import com.consignment.service.model.settlement.SettlementResponse;
 import com.consignment.service.model.settlement.SettlementSearchCriteria;
 import com.consignment.service.persistence.mapper.CsaMapper;
 import com.consignment.service.persistence.mapper.CsoMapper;
-import com.consignment.service.persistence.mapper.CsrMapper;
+import com.consignment.service.persistence.mapper.CsrnMapper;
 import com.consignment.service.persistence.mapper.CsrvMapper;
 import com.consignment.service.persistence.mapper.CsdoMapper;
 import com.consignment.service.persistence.mapper.SettlementRequestMapper;
@@ -20,8 +20,8 @@ import com.consignment.service.persistence.model.CsaDetailEntity;
 import com.consignment.service.persistence.model.CsaHeaderEntity;
 import com.consignment.service.persistence.model.CsoDetailEntity;
 import com.consignment.service.persistence.model.CsoHeaderEntity;
-import com.consignment.service.persistence.model.CsrDetailEntity;
-import com.consignment.service.persistence.model.CsrHeaderEntity;
+import com.consignment.service.persistence.model.CsrnDetailEntity;
+import com.consignment.service.persistence.model.CsrnHeaderEntity;
 import com.consignment.service.persistence.model.CsrvDetailEntity;
 import com.consignment.service.persistence.model.CsrvHeaderEntity;
 import com.consignment.service.persistence.model.CsdoDetailEntity;
@@ -54,14 +54,14 @@ public class SettlementService {
     private static final String DOC_TYPE_CSO = "CSO";
     private static final String DOC_TYPE_CSDO = "CSDO";
     private static final String DOC_TYPE_CSRV = "CSRV";
-    private static final String DOC_TYPE_CSR = "CSR";
+    private static final String DOC_TYPE_CSRN = "CSRN";
     private static final String DOC_TYPE_CSA = "CSA";
 
     private final SettlementRequestMapper settlementRequestMapper;
     private final CsoMapper csoMapper;
     private final CsdoMapper csdoMapper;
     private final CsrvMapper csrvMapper;
-    private final CsrMapper csrMapper;
+    private final CsrnMapper csrnMapper;
     private final CsaMapper csaMapper;
     private final PricingService pricingService;
     private final AtomicLong sequence = new AtomicLong(1);
@@ -71,7 +71,7 @@ public class SettlementService {
             CsoMapper csoMapper,
             CsdoMapper csdoMapper,
             CsrvMapper csrvMapper,
-            CsrMapper csrMapper,
+            CsrnMapper csrnMapper,
                 CsaMapper csaMapper,
                 PricingService pricingService
     ) {
@@ -79,7 +79,7 @@ public class SettlementService {
         this.csoMapper = csoMapper;
         this.csdoMapper = csdoMapper;
         this.csrvMapper = csrvMapper;
-        this.csrMapper = csrMapper;
+        this.csrnMapper = csrnMapper;
         this.csaMapper = csaMapper;
         this.pricingService = pricingService;
     }
@@ -256,7 +256,7 @@ public class SettlementService {
             case DOC_TYPE_CSO -> postCsoDetails(settlement, document);
             case DOC_TYPE_CSDO -> postCsdoDetails(settlement, document);
             case DOC_TYPE_CSRV -> postCsrvDetails(settlement, document);
-            case DOC_TYPE_CSR -> postCsrDetails(settlement, document);
+            case DOC_TYPE_CSRN -> postCsrnDetails(settlement, document);
             case DOC_TYPE_CSA -> postCsaDetails(settlement, document);
             default -> throw new BusinessRuleViolationException("Unsupported settlement document type: " + document.documentType());
         }
@@ -297,12 +297,12 @@ public class SettlementService {
             }
         }
 
-        List<CsrHeaderEntity> csrHeaders = csrMapper.searchHeaders(
-                new com.consignment.service.model.csr.CsrSearchCriteria(null, request.company(), request.store(), request.supplierCode(), request.supplierContract(), null, STATUS_COMPLETED, null, null, null, null, 1, Integer.MAX_VALUE)
+        List<CsrnHeaderEntity> csrnHeaders = csrnMapper.searchHeaders(
+                new com.consignment.service.model.csrn.CsrnSearchCriteria(null, request.company(), request.store(), request.supplierCode(), request.supplierContract(), null, STATUS_COMPLETED, null, null, null, null, 1, Integer.MAX_VALUE)
         ).stream().toList();
-        for (CsrHeaderEntity header : csrHeaders) {
+        for (CsrnHeaderEntity header : csrnHeaders) {
             if (isWithinPeriod(header.getCreatedAt(), request.fromDate(), request.toDate())) {
-                sources.add(new SettlementDocumentSourceRequest(DOC_TYPE_CSR, header.getId(), defaultUnitPrice, "batch-generated"));
+                sources.add(new SettlementDocumentSourceRequest(DOC_TYPE_CSRN, header.getId(), defaultUnitPrice, "batch-generated"));
             }
         }
 
@@ -433,28 +433,28 @@ public class SettlementService {
         }
     }
 
-    private void postCsrDetails(SettlementRequestEntity settlement, SettlementDocumentSourceRequest document) {
-        requireSettlementType(settlement, TYPE_SUPPLIER, DOC_TYPE_CSR);
-        CsrHeaderEntity header = csrMapper.findHeaderById(document.documentId());
+    private void postCsrnDetails(SettlementRequestEntity settlement, SettlementDocumentSourceRequest document) {
+        requireSettlementType(settlement, TYPE_SUPPLIER, DOC_TYPE_CSRN);
+        CsrnHeaderEntity header = csrnMapper.findHeaderById(document.documentId());
         if (header == null) {
-            throw new ResourceNotFoundException("CSR not found: " + document.documentId());
+            throw new ResourceNotFoundException("CSRN not found: " + document.documentId());
         }
-        requireDocumentStatus(DOC_TYPE_CSR, header.getDocNo(), header.getStatus(), STATUS_COMPLETED);
+        requireDocumentStatus(DOC_TYPE_CSRN, header.getDocNo(), header.getStatus(), STATUS_COMPLETED);
         validateSupplierAlignment(
                 settlement,
                 header.getCompany(),
                 header.getStore(),
                 header.getSupplierCode(),
                 header.getSupplierContract(),
-                DOC_TYPE_CSR,
+                DOC_TYPE_CSRN,
                 header.getDocNo()
         );
 
-        for (CsrDetailEntity detail : csrMapper.findDetailsByHeaderId(header.getId())) {
+        for (CsrnDetailEntity detail : csrnMapper.findDetailsByHeaderId(header.getId())) {
             BigDecimal actualQty = detail.getActualQty() == null ? detail.getQty() : detail.getActualQty();
             insertDetailIfAbsent(
                     settlement.getId(),
-                    DOC_TYPE_CSR,
+                    DOC_TYPE_CSRN,
                     header.getDocNo(),
                     detail.getItemCode(),
                     actualQty.negate(),

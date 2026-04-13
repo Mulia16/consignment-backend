@@ -5,17 +5,20 @@ import java.time.Instant;
 public class CsrnHeaderEntity {
     private String id;
     private String docNo;
-    private String csoDocNo;
     private String company;
     private String store;
     private String supplierCode;
     private String supplierContract;
     private String internalSupplierStore;
+    private String supplierConfirmNote;
     private String reasonCode;
     private String remark;
     private String status;
     private String createdBy;
     private String referenceNo;
+    private String csoDocNo;
+    private Instant releasedAt;
+    private Instant completedAt;
     private Instant createdAt;
     private Instant updatedAt;
 
@@ -23,8 +26,6 @@ public class CsrnHeaderEntity {
     public void setId(String id) { this.id = id; }
     public String getDocNo() { return docNo; }
     public void setDocNo(String docNo) { this.docNo = docNo; }
-    public String getCsoDocNo() { return csoDocNo; }
-    public void setCsoDocNo(String csoDocNo) { this.csoDocNo = csoDocNo; }
     public String getCompany() { return company; }
     public void setCompany(String company) { this.company = company; }
     public String getStore() { return store; }
@@ -35,6 +36,8 @@ public class CsrnHeaderEntity {
     public void setSupplierContract(String supplierContract) { this.supplierContract = supplierContract; }
     public String getInternalSupplierStore() { return internalSupplierStore; }
     public void setInternalSupplierStore(String internalSupplierStore) { this.internalSupplierStore = internalSupplierStore; }
+    public String getSupplierConfirmNote() { return supplierConfirmNote; }
+    public void setSupplierConfirmNote(String supplierConfirmNote) { this.supplierConfirmNote = supplierConfirmNote; }
     public String getReasonCode() { return reasonCode; }
     public void setReasonCode(String reasonCode) { this.reasonCode = reasonCode; }
     public String getRemark() { return remark; }
@@ -45,6 +48,12 @@ public class CsrnHeaderEntity {
     public void setCreatedBy(String createdBy) { this.createdBy = createdBy; }
     public String getReferenceNo() { return referenceNo; }
     public void setReferenceNo(String referenceNo) { this.referenceNo = referenceNo; }
+    public String getCsoDocNo() { return csoDocNo; }
+    public void setCsoDocNo(String csoDocNo) { this.csoDocNo = csoDocNo; }
+    public Instant getReleasedAt() { return releasedAt; }
+    public void setReleasedAt(Instant releasedAt) { this.releasedAt = releasedAt; }
+    public Instant getCompletedAt() { return completedAt; }
+    public void setCompletedAt(Instant completedAt) { this.completedAt = completedAt; }
     public Instant getCreatedAt() { return createdAt; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }

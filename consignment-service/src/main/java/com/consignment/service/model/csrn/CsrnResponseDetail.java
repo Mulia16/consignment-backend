@@ -6,6 +6,7 @@ public record CsrnResponseDetail(
         String id,
         String itemCode,
         String uom,
-        BigDecimal qty
+        BigDecimal qty,
+        BigDecimal actualQty
 ) {
 }

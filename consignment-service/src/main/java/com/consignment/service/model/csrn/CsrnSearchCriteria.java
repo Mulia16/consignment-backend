@@ -1,18 +1,17 @@
 package com.consignment.service.model.csrn;
 
-import java.time.LocalDate;
-
 public record CsrnSearchCriteria(
         String docNo,
         String company,
         String store,
         String supplierCode,
-        String csoDocNo,
+        String supplierContract,
+        String internalSupplierStore,
         String status,
         String createdBy,
+        String referenceNo,
+        String reasonCode,
         String itemCode,
-        LocalDate updatedFrom,
-        LocalDate updatedTo,
         int page,
         int perPage
 ) {

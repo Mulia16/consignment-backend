@@ -6,7 +6,7 @@ import com.consignment.service.model.settlement.SettlementDocumentPostRequest;
 import com.consignment.service.model.settlement.SettlementDocumentSourceRequest;
 import com.consignment.service.persistence.mapper.CsaMapper;
 import com.consignment.service.persistence.mapper.CsoMapper;
-import com.consignment.service.persistence.mapper.CsrMapper;
+import com.consignment.service.persistence.mapper.CsrnMapper;
 import com.consignment.service.persistence.mapper.CsrvMapper;
 import com.consignment.service.persistence.mapper.CsdoMapper;
 import com.consignment.service.persistence.mapper.SettlementRequestMapper;
@@ -51,7 +51,7 @@ class SettlementServiceTest {
     private CsrvMapper csrvMapper;
 
     @Mock
-    private CsrMapper csrMapper;
+    private CsrnMapper csrnMapper;
 
     @Mock
     private CsaMapper csaMapper;
@@ -68,7 +68,7 @@ class SettlementServiceTest {
                 csoMapper,
                 csdoMapper,
                 csrvMapper,
-                csrMapper,
+                csrnMapper,
                 csaMapper,
                 pricingService
         );

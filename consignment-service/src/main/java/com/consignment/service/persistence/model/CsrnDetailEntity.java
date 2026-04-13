@@ -8,6 +8,7 @@ public class CsrnDetailEntity {
     private String itemCode;
     private String uom;
     private BigDecimal qty;
+    private BigDecimal actualQty;
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
@@ -19,4 +20,6 @@ public class CsrnDetailEntity {
     public void setUom(String uom) { this.uom = uom; }
     public BigDecimal getQty() { return qty; }
     public void setQty(BigDecimal qty) { this.qty = qty; }
+    public BigDecimal getActualQty() { return actualQty; }
+    public void setActualQty(BigDecimal actualQty) { this.actualQty = actualQty; }
 }

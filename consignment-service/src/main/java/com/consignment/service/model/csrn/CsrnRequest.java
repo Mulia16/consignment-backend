@@ -11,12 +11,13 @@ public record CsrnRequest(
         @NotBlank String store,
         @NotBlank String supplierCode,
         @NotBlank String supplierContract,
-        @NotBlank String csoDocNo,
         String internalSupplierStore,
+        String supplierConfirmNote,
         String reasonCode,
         String remark,
         @NotBlank String createdBy,
         String referenceNo,
+        @NotBlank String csoDocNo,
         @Valid @NotEmpty List<CsrnDetailRequest> items
 ) {
 }

@@ -4,5 +4,5 @@ public interface NotificationService {
 
     void sendCsrqReleased(String docNo, String supplierCode);
 
-    void sendCsrReleased(String docNo, String supplierCode);
+    void sendCsrnReleased(String docNo, String supplierCode);
 }
