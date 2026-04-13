@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.consignment.service.persistence.mapper.CustomerBillingMapper">
+
+    <resultMap id="HeaderResultMap" type="com.consignment.service.persistence.model.CustomerBillingRequestEntity">
+        <id property="id" column="id"/>
+        <result property="docNo" column="doc_no"/>
+        <result property="periodType" column="period_type"/>
+        <result property="fromDate" column="from_date"/>
+        <result property="toDate" column="to_date"/>
+        <result property="store" column="store"/>
+        <result property="customerCode" column="customer_code"/>
+        <result property="customerBranch" column="customer_branch"/>
+        <result property="status" column="status"/>
+        <result property="processStatus" column="process_status"/>
+        <result property="createdBy" column="created_by"/>
+        <result property="releasedAt" column="released_at"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <resultMap id="DetailResultMap" type="com.consignment.service.persistence.model.CustomerBillingRequestDetailEntity">
+        <id property="id" column="id"/>
+        <result property="billingId" column="billing_id"/>
+        <result property="customerCode" column="customer_code"/>
+        <result property="customerBranch" column="customer_branch"/>
+        <result property="itemCode" column="item_code"/>
+        <result property="uom" column="uom"/>
+        <result property="salesQty" column="sales_qty"/>
+        <result property="returnQty" column="return_qty"/>
+        <result property="billingQty" column="billing_qty"/>
+        <result property="unitPrice" column="unit_price"/>
+        <result property="lineAmount" column="line_amount"/>
+        <result property="actualReturnQty" column="actual_return_qty"/>
+    </resultMap>
+
+    <resultMap id="UnpostResultMap" type="com.consignment.service.persistence.mapper.CustomerBillingMapper$UnpostRow">
+        <result property="sku" column="sku"/>
+        <result property="location" column="location"/>
+        <result property="salesQty" column="sales_qty"/>
+        <result property="returnQty" column="return_qty"/>
+    </resultMap>
+
+    <insert id="insertHeader" parameterType="com.consignment.service.persistence.model.CustomerBillingRequestEntity">
+        INSERT INTO customer_billing_request
+            (id, doc_no, period_type, from_date, to_date, store, customer_code, customer_branch,
+             status, process_status, created_by, created_at, updated_at)
+        VALUES
+            (#{id}, #{docNo}, #{periodType}, #{fromDate}, #{toDate}, #{store}, #{customerCode}, #{customerBranch},
+             #{status}, #{processStatus}, #{createdBy}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    </insert>
+
+    <insert id="insertDetail" parameterType="com.consignment.service.persistence.model.CustomerBillingRequestDetailEntity">
+        INSERT INTO customer_billing_request_detail
+            (id, billing_id, customer_code, customer_branch, item_code, uom,
+             sales_qty, return_qty, billing_qty, unit_price, line_amount, actual_return_qty)
+        VALUES
+            (#{id}, #{billingId}, #{customerCode}, #{customerBranch}, #{itemCode}, #{uom},
+             #{salesQty}, #{returnQty}, #{billingQty}, #{unitPrice}, #{lineAmount}, #{actualReturnQty})
+    </insert>
+
+    <select id="findById" resultMap="HeaderResultMap">
+        SELECT id, doc_no, period_type, from_date, to_date, store, customer_code, customer_branch,
+               status, process_status, created_by, released_at, created_at, updated_at
+        FROM customer_billing_request WHERE id = #{id}
+    </select>
+
+    <sql id="filterWhere">
+        <where>
+            <if test="c.docNo != null and c.docNo != ''">AND h.doc_no ILIKE CONCAT('%', #{c.docNo}, '%')</if>
+            <if test="c.store != null and c.store != ''">AND h.store = #{c.store}</if>
+            <if test="c.customerCode != null and c.customerCode != ''">AND h.customer_code = #{c.customerCode}</if>
+            <if test="c.customerBranch != null and c.customerBranch != ''">AND h.customer_branch = #{c.customerBranch}</if>
+            <if test="c.periodType != null and c.periodType != ''">AND h.period_type = #{c.periodType}</if>
+            <if test="c.status != null and c.status != ''">AND h.status = #{c.status}</if>
+            <if test="c.processStatus != null and c.processStatus != ''">AND h.process_status = #{c.processStatus}</if>
+            <if test="c.fromDate != null">AND h.from_date &gt;= #{c.fromDate}</if>
+            <if test="c.toDate != null">AND h.to_date &lt;= #{c.toDate}</if>
+        </where>
+    </sql>
+
+    <select id="search" resultMap="HeaderResultMap">
+        SELECT h.id, h.doc_no, h.period_type, h.from_date, h.to_date, h.store, h.customer_code, h.customer_branch,
+               h.status, h.process_status, h.created_by, h.released_at, h.created_at, h.updated_at
+        FROM customer_billing_request h
+        <include refid="filterWhere"/>
+        ORDER BY h.created_at DESC
+        LIMIT #{c.perPage} OFFSET #{c.offset}
+    </select>
+
+    <select id="count" resultType="long">
+        SELECT COUNT(h.id) FROM customer_billing_request h
+        <include refid="filterWhere"/>
+    </select>
+
+    <select id="findDetailsByBillingId" resultMap="DetailResultMap">
+        SELECT id, billing_id, customer_code, customer_branch, item_code, uom,
+               sales_qty, return_qty, billing_qty, unit_price, line_amount, actual_return_qty
+        FROM customer_billing_request_detail
+        WHERE billing_id = #{billingId}
+        ORDER BY customer_code, item_code
+    </select>
+
+    <update id="updateStatus">
+        UPDATE customer_billing_request
+        SET status = #{status},
+            released_at = #{releasedAt},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
+    <update id="updateActualReturnQty">
+        UPDATE customer_billing_request_detail
+        SET actual_return_qty = #{actualReturnQty}
+        WHERE id = #{detailId}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM customer_billing_request WHERE id = #{id}
+    </delete>
+
+    <select id="findMaxDocNoNumber" resultType="long">
+        SELECT COALESCE(MAX(CAST(SUBSTRING(doc_no FROM 5) AS BIGINT)), 0)
+        FROM customer_billing_request WHERE doc_no ~ '^CBR-[0-9]+$'
+    </select>
+
+    <!-- Query unpost staging inventory grouped by sku for a store+customer in date range -->
+    <select id="findUnpostByStoreAndCustomer" resultMap="UnpostResultMap">
+        SELECT sku, location, sales_qty, return_qty
+        FROM unpost_staging_inventory
+        WHERE location = #{store}
+        <if test="customerCode != null and customerCode != ''">
+            AND sku IN (
+                SELECT DISTINCT sku FROM customer_consignment_inventory
+                WHERE issue_from_store = #{store}
+                  AND customer_code = #{customerCode}
+            )
+        </if>
+    </select>
+
+</mapper>

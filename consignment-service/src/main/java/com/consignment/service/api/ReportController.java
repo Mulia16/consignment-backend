@@ -5,8 +5,11 @@ import com.consignment.service.model.PageMeta;
 import com.consignment.service.model.report.CustomerInventoryRow;
 import com.consignment.service.model.report.ReportRow;
 import com.consignment.service.model.report.StockSummaryRow;
+import com.consignment.service.excel.ReportExcelService;
 import com.consignment.service.service.ReportService;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,9 +21,11 @@ import java.util.List;
 public class ReportController {
 
     private final ReportService reportService;
+    private final ReportExcelService reportExcelService;
 
-    public ReportController(ReportService reportService) {
+    public ReportController(ReportService reportService, ReportExcelService reportExcelService) {
         this.reportService = reportService;
+        this.reportExcelService = reportExcelService;
     }
 
     @GetMapping("/csrq")
@@ -134,5 +139,74 @@ public class ReportController {
             @RequestParam(required = false) String supplierCode) {
         List<ReportRow> data = reportService.consignmentSetupReport(company, store, supplierCode);
         return ResponseEntity.ok(ApiResponse.paginated(data, PageMeta.of(1, data.size(), data.size())));
+    }
+
+    // ── Excel Export Endpoints ────────────────────────────────────────────────
+
+    @GetMapping("/{type}/export")
+    public ResponseEntity<byte[]> exportTransaction(
+            @PathVariable String type,
+            @RequestParam(required = false) String company,
+            @RequestParam(required = false) String store,
+            @RequestParam(required = false) String supplierCode,
+            @RequestParam(required = false) String customerCode,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
+            @RequestParam(required = false) String status) {
+        byte[] xlsx = reportExcelService.exportTransactionReport(type, company, store, supplierCode, customerCode, fromDate, toDate, status);
+        return excelResponse(xlsx, type + "-report.xlsx");
+    }
+
+    @GetMapping("/supplier-book-value/export")
+    public ResponseEntity<byte[]> exportSupplierBookValue(
+            @RequestParam(required = false) String company, @RequestParam(required = false) String store,
+            @RequestParam(required = false) String supplierCode, @RequestParam(required = false) String supplierContract) {
+        return excelResponse(reportExcelService.exportSupplierBookValue(company, store, supplierCode, supplierContract),
+                "SupplierBookValue.xlsx");
+    }
+
+    @GetMapping("/customer-inventory/export")
+    public ResponseEntity<byte[]> exportCustomerInventory(
+            @RequestParam(required = false) String store, @RequestParam(required = false) String customerCode) {
+        return excelResponse(reportExcelService.exportCustomerInventory(store, customerCode), "CustomerInventory.xlsx");
+    }
+
+    @GetMapping("/settlement-summary/export")
+    public ResponseEntity<byte[]> exportSettlementSummary(
+            @RequestParam(required = false) String company, @RequestParam(required = false) String store,
+            @RequestParam(required = false) String settlementType,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
+            @RequestParam(required = false) String status) {
+        return excelResponse(reportExcelService.exportSettlementSummary(company, store, settlementType, fromDate, toDate, status),
+                "SettlementSummary.xlsx");
+    }
+
+    @GetMapping("/settlement-detail/{settlementId}/export")
+    public ResponseEntity<byte[]> exportSettlementDetail(@PathVariable String settlementId) {
+        return excelResponse(reportExcelService.exportSettlementDetail(settlementId),
+                "SettlementDetail-" + settlementId + ".xlsx");
+    }
+
+    @GetMapping("/consignment-setup/export")
+    public ResponseEntity<byte[]> exportConsignmentSetup(
+            @RequestParam(required = false) String company, @RequestParam(required = false) String store,
+            @RequestParam(required = false) String supplierCode) {
+        return excelResponse(reportExcelService.exportConsignmentSetup(company, store, supplierCode),
+                "ItemStoreSupplier.xlsx");
+    }
+
+    @GetMapping("/reservations/export")
+    public ResponseEntity<byte[]> exportReservations(
+            @RequestParam(required = false) String store, @RequestParam(required = false) String itemCode) {
+        return excelResponse(reportExcelService.exportReservations(store, itemCode), "Reservations.xlsx");
+    }
+
+    private ResponseEntity<byte[]> excelResponse(byte[] data, String filename) {
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .header("X-Filename", filename)
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(data);
     }
 }

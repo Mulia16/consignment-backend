@@ -5,8 +5,11 @@ import com.consignment.service.model.csrv.CsrvRequest;
 import com.consignment.service.model.csrv.CsrvResponse;
 import com.consignment.service.model.csrv.CsrvSearchCriteria;
 import com.consignment.service.model.csrv.CsrvUpdateRequest;
+import com.consignment.service.pdf.CsrvSlipService;
 import com.consignment.service.service.CsrvService;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -18,9 +21,11 @@ import java.util.List;
 public class CsrvController {
 
     private final CsrvService csrvService;
+    private final CsrvSlipService csrvSlipService;
 
-    public CsrvController(CsrvService csrvService) {
+    public CsrvController(CsrvService csrvService, CsrvSlipService csrvSlipService) {
         this.csrvService = csrvService;
+        this.csrvSlipService = csrvSlipService;
     }
 
     @GetMapping("/api/csrv")
@@ -70,5 +75,16 @@ public class CsrvController {
     public ResponseEntity<ApiResponse<CsrvResponse>> autoCreate(@Valid @RequestBody CsrvRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("CSRV auto-created", csrvService.autoCreate(request)));
+    }
+
+    @GetMapping("/api/csrv/{id}/slip")
+    public ResponseEntity<byte[]> printSlip(@PathVariable String id) {
+        byte[] pdf = csrvSlipService.generate(id);
+        String filename = "CSRV-" + id + ".pdf";
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .header("X-Filename", filename)
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdf);
     }
 }

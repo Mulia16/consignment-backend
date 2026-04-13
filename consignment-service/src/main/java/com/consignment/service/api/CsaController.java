@@ -4,8 +4,11 @@ import com.consignment.service.model.ApiResponse;
 import com.consignment.service.model.csa.CsaRequest;
 import com.consignment.service.model.csa.CsaResponse;
 import com.consignment.service.model.csa.CsaSearchCriteria;
+import com.consignment.service.pdf.CsaSlipService;
 import com.consignment.service.service.CsaService;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -17,9 +20,11 @@ import java.util.List;
 public class CsaController {
 
     private final CsaService csaService;
+    private final CsaSlipService csaSlipService;
 
-    public CsaController(CsaService csaService) {
+    public CsaController(CsaService csaService, CsaSlipService csaSlipService) {
         this.csaService = csaService;
+        this.csaSlipService = csaSlipService;
     }
 
     @GetMapping
@@ -56,5 +61,16 @@ public class CsaController {
             @PathVariable String id,
             @RequestHeader(value = "X-User", required = false) String releasedBy) {
         return ResponseEntity.ok(ApiResponse.success(csaService.release(id, releasedBy)));
+    }
+
+    @GetMapping("/{id}/slip")
+    public ResponseEntity<byte[]> printSlip(@PathVariable String id) {
+        byte[] pdf = csaSlipService.generate(id);
+        String filename = "CSA-" + id + ".pdf";
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .header("X-Filename", filename)
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdf);
     }
 }

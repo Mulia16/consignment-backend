@@ -1,0 +1,349 @@
+{
+  "info": {
+    "name": "CMS - Customer Billing Request",
+    "_postman_id": "cms-customer-billing-v1",
+    "description": "Customer Consignment Billing Request API\n\nFlow:\n1. POST /compute — compute billing from unpost inventory, creates CBR document (status HELD)\n2. GET / — list all billing requests\n3. GET /:id — get detail\n4. PUT /:id/release — release (HELD → RELEASED)\n5. PUT /:id/detail/:detailId/actual-return-qty — update actual return qty (RELEASED only)\n6. DELETE /:id — delete (HELD only)\n\nDoc No format: CBR-00001\nBase URL: http://localhost:8080\nAll requests require: Authorization: Bearer {{token}}",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "token", "value": "" },
+    { "key": "billingId", "value": "" },
+    { "key": "detailId", "value": "" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "1. Compute Customer Billing Request",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var j = pm.response.json();",
+              "if (j.data && j.data.id) {",
+              "  pm.collectionVariables.set('billingId', j.data.id);",
+              "  console.log('billingId saved:', j.data.id);",
+              "}",
+              "if (j.data && j.data.details && j.data.details.length > 0) {",
+              "  pm.collectionVariables.set('detailId', j.data.details[0].id);",
+              "  console.log('detailId saved:', j.data.details[0].id);",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"store\": \"STORE01\",\n  \"fromDate\": \"2026-04-01\",\n  \"toDate\": \"2026-04-30\",\n  \"periodType\": \"MONTHLY\",\n  \"customerCode\": null,\n  \"createdBy\": \"admin\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/consignment/api/customer-billing/compute",
+          "host": ["{{baseUrl}}"],
+          "path": ["consignment", "api", "customer-billing", "compute"]
+        },
+        "description": "Compute customer consignment billing request.\n\nSystem reads unpost_staging_inventory for the store (filtered by customerCode if provided), calculates billingQty = salesQty - returnQty, resolves unit price, and creates a new CBR document with status HELD.\n\nperiodType: MONTHLY / WEEKLY\ncustomerCode: null = compute all customers under this store"
+      },
+      "response": [
+        {
+          "name": "201 Created",
+          "originalRequest": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"store\": \"STORE01\",\n  \"fromDate\": \"2026-04-01\",\n  \"toDate\": \"2026-04-30\",\n  \"periodType\": \"MONTHLY\",\n  \"customerCode\": null,\n  \"createdBy\": \"admin\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/consignment/api/customer-billing/compute",
+              "host": ["{{baseUrl}}"],
+              "path": ["consignment", "api", "customer-billing", "compute"]
+            }
+          },
+          "status": "Created",
+          "code": 201,
+          "_postman_previewlanguage": "json",
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "cookie": [],
+          "body": "{\n  \"message\": \"Customer billing request computed\",\n  \"status\": 201,\n  \"data\": {\n    \"id\": \"cbr-001\",\n    \"docNo\": \"CBR-00001\",\n    \"periodType\": \"MONTHLY\",\n    \"fromDate\": \"2026-04-01\",\n    \"toDate\": \"2026-04-30\",\n    \"store\": \"STORE01\",\n    \"customerCode\": null,\n    \"customerBranch\": null,\n    \"status\": \"HELD\",\n    \"processStatus\": \"COMPLETED\",\n    \"createdBy\": \"admin\",\n    \"releasedAt\": null,\n    \"createdAt\": \"2026-04-13T05:00:00Z\",\n    \"updatedAt\": \"2026-04-13T05:00:00Z\",\n    \"details\": [\n      {\n        \"id\": \"detail-001\",\n        \"customerCode\": \"CUST001\",\n        \"customerBranch\": null,\n        \"itemCode\": \"ITEM001\",\n        \"uom\": \"PCS\",\n        \"salesQty\": 10.0,\n        \"returnQty\": 2.0,\n        \"billingQty\": 8.0,\n        \"unitPrice\": 15000000.0,\n        \"lineAmount\": 120000000.0,\n        \"actualReturnQty\": null\n      }\n    ]\n  }\n}"
+        }
+      ]
+    },
+    {
+      "name": "2. List Customer Billing Requests",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/consignment/api/customer-billing?page=1&perPage=20",
+          "host": ["{{baseUrl}}"],
+          "path": ["consignment", "api", "customer-billing"],
+          "query": [
+            { "key": "page", "value": "1" },
+            { "key": "perPage", "value": "20" },
+            { "key": "docNo", "value": "", "description": "Filter by doc number", "disabled": true },
+            { "key": "store", "value": "", "description": "Internal supplier store", "disabled": true },
+            { "key": "customerCode", "value": "", "disabled": true },
+            { "key": "customerBranch", "value": "", "disabled": true },
+            { "key": "periodType", "value": "", "description": "MONTHLY / WEEKLY", "disabled": true },
+            { "key": "status", "value": "", "description": "HELD / RELEASED", "disabled": true },
+            { "key": "processStatus", "value": "", "description": "COMPLETED / FAILED", "disabled": true },
+            { "key": "fromDate", "value": "", "description": "YYYY-MM-DD", "disabled": true },
+            { "key": "toDate", "value": "", "description": "YYYY-MM-DD", "disabled": true }
+          ]
+        },
+        "description": "List and search customer consignment billing requests.\n\nAll filters are optional. Results ordered by createdAt DESC."
+      },
+      "response": [
+        {
+          "name": "200 OK",
+          "originalRequest": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/consignment/api/customer-billing?page=1&perPage=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["consignment", "api", "customer-billing"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "perPage", "value": "20" }
+              ]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "cookie": [],
+          "body": "{\n  \"message\": \"success\",\n  \"status\": 200,\n  \"data\": [\n    {\n      \"id\": \"cbr-001\",\n      \"docNo\": \"CBR-00001\",\n      \"periodType\": \"MONTHLY\",\n      \"fromDate\": \"2026-04-01\",\n      \"toDate\": \"2026-04-30\",\n      \"store\": \"STORE01\",\n      \"customerCode\": null,\n      \"customerBranch\": null,\n      \"status\": \"HELD\",\n      \"processStatus\": \"COMPLETED\",\n      \"createdBy\": \"admin\",\n      \"releasedAt\": null,\n      \"createdAt\": \"2026-04-13T05:00:00Z\",\n      \"updatedAt\": \"2026-04-13T05:00:00Z\",\n      \"details\": []\n    }\n  ],\n  \"meta\": { \"page\": 1, \"perPage\": 20, \"totalData\": 1, \"totalPage\": 1 }\n}"
+        }
+      ]
+    },
+    {
+      "name": "3. Get Customer Billing Request by ID",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/consignment/api/customer-billing/{{billingId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["consignment", "api", "customer-billing", "{{billingId}}"],
+          "variable": [{ "key": "billingId", "value": "{{billingId}}", "description": "CBR document ID" }]
+        },
+        "description": "Get full detail of a customer billing request including all detail lines."
+      },
+      "response": [
+        {
+          "name": "200 OK",
+          "originalRequest": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/consignment/api/customer-billing/{{billingId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["consignment", "api", "customer-billing", "{{billingId}}"]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "cookie": [],
+          "body": "{\n  \"message\": \"success\",\n  \"status\": 200,\n  \"data\": {\n    \"id\": \"cbr-001\",\n    \"docNo\": \"CBR-00001\",\n    \"periodType\": \"MONTHLY\",\n    \"fromDate\": \"2026-04-01\",\n    \"toDate\": \"2026-04-30\",\n    \"store\": \"STORE01\",\n    \"customerCode\": null,\n    \"status\": \"HELD\",\n    \"processStatus\": \"COMPLETED\",\n    \"createdBy\": \"admin\",\n    \"details\": [\n      {\n        \"id\": \"detail-001\",\n        \"customerCode\": \"CUST001\",\n        \"itemCode\": \"ITEM001\",\n        \"uom\": \"PCS\",\n        \"salesQty\": 10.0,\n        \"returnQty\": 2.0,\n        \"billingQty\": 8.0,\n        \"unitPrice\": 15000000.0,\n        \"lineAmount\": 120000000.0,\n        \"actualReturnQty\": null\n      }\n    ]\n  }\n}"
+        },
+        {
+          "name": "404 Not Found",
+          "originalRequest": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/consignment/api/customer-billing/invalid-id",
+              "host": ["{{baseUrl}}"],
+              "path": ["consignment", "api", "customer-billing", "invalid-id"]
+            }
+          },
+          "status": "Not Found",
+          "code": 404,
+          "_postman_previewlanguage": "json",
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "cookie": [],
+          "body": "{\n  \"message\": \"Customer billing request not found: invalid-id\",\n  \"status\": 404\n}"
+        }
+      ]
+    },
+    {
+      "name": "4. Release Customer Billing Request",
+      "request": {
+        "method": "PUT",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/consignment/api/customer-billing/{{billingId}}/release",
+          "host": ["{{baseUrl}}"],
+          "path": ["consignment", "api", "customer-billing", "{{billingId}}", "release"],
+          "variable": [{ "key": "billingId", "value": "{{billingId}}" }]
+        },
+        "description": "Release billing request (HELD → RELEASED).\n\nAfter release, user can only input actual return qty. Other fields are locked.\n\nAfter released, based on billingQty:\n- billingQty > 0:\n  - Same company outlet: auto create Transfer Note\n  - Different company outlet: auto create Sales Invoice + PO + Receiving\n  - External customer: auto create Sales Invoice\n- billingQty < 0:\n  - Same company outlet: auto create Transfer Note (reverse)\n  - Different company outlet: auto create Sales Credit Note + Goods Return\n  - External customer: auto create Sales Credit Note"
+      },
+      "response": [
+        {
+          "name": "200 OK",
+          "originalRequest": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/consignment/api/customer-billing/{{billingId}}/release",
+              "host": ["{{baseUrl}}"],
+              "path": ["consignment", "api", "customer-billing", "{{billingId}}", "release"]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "cookie": [],
+          "body": "{\n  \"message\": \"success\",\n  \"status\": 200,\n  \"data\": {\n    \"id\": \"cbr-001\",\n    \"docNo\": \"CBR-00001\",\n    \"status\": \"RELEASED\",\n    \"releasedAt\": \"2026-04-13T06:00:00Z\"\n  }\n}"
+        },
+        {
+          "name": "400 Not HELD",
+          "originalRequest": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/consignment/api/customer-billing/{{billingId}}/release",
+              "host": ["{{baseUrl}}"],
+              "path": ["consignment", "api", "customer-billing", "{{billingId}}", "release"]
+            }
+          },
+          "status": "Bad Request",
+          "code": 400,
+          "_postman_previewlanguage": "json",
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "cookie": [],
+          "body": "{\n  \"message\": \"Only HELD billing request can be released\",\n  \"status\": 400\n}"
+        }
+      ]
+    },
+    {
+      "name": "5. Update Actual Return Qty (RELEASED only)",
+      "request": {
+        "method": "PUT",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"actualReturnQty\": 1.5\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/consignment/api/customer-billing/{{billingId}}/detail/{{detailId}}/actual-return-qty",
+          "host": ["{{baseUrl}}"],
+          "path": ["consignment", "api", "customer-billing", "{{billingId}}", "detail", "{{detailId}}", "actual-return-qty"],
+          "variable": [
+            { "key": "billingId", "value": "{{billingId}}", "description": "CBR document ID" },
+            { "key": "detailId", "value": "{{detailId}}", "description": "Detail line ID (from details[].id)" }
+          ]
+        },
+        "description": "Update actual return quantity on a specific detail line.\n\nOnly allowed when billing request status is RELEASED.\ndetailId = details[].id from the get detail response."
+      },
+      "response": [
+        {
+          "name": "200 OK",
+          "originalRequest": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"actualReturnQty\": 1.5\n}" },
+            "url": {
+              "raw": "{{baseUrl}}/consignment/api/customer-billing/{{billingId}}/detail/{{detailId}}/actual-return-qty",
+              "host": ["{{baseUrl}}"],
+              "path": ["consignment", "api", "customer-billing", "{{billingId}}", "detail", "{{detailId}}", "actual-return-qty"]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "cookie": [],
+          "body": "{\n  \"message\": \"success\",\n  \"status\": 200,\n  \"data\": {\n    \"id\": \"cbr-001\",\n    \"status\": \"RELEASED\",\n    \"details\": [\n      {\n        \"id\": \"detail-001\",\n        \"itemCode\": \"ITEM001\",\n        \"billingQty\": 8.0,\n        \"actualReturnQty\": 1.5\n      }\n    ]\n  }\n}"
+        },
+        {
+          "name": "400 Not RELEASED",
+          "originalRequest": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"actualReturnQty\": 1.5\n}" },
+            "url": {
+              "raw": "{{baseUrl}}/consignment/api/customer-billing/{{billingId}}/detail/{{detailId}}/actual-return-qty",
+              "host": ["{{baseUrl}}"],
+              "path": ["consignment", "api", "customer-billing", "{{billingId}}", "detail", "{{detailId}}", "actual-return-qty"]
+            }
+          },
+          "status": "Bad Request",
+          "code": 400,
+          "_postman_previewlanguage": "json",
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "cookie": [],
+          "body": "{\n  \"message\": \"Actual return qty can only be updated after release\",\n  \"status\": 400\n}"
+        }
+      ]
+    },
+    {
+      "name": "6. Delete Customer Billing Request (HELD only)",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/consignment/api/customer-billing/{{billingId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["consignment", "api", "customer-billing", "{{billingId}}"],
+          "variable": [{ "key": "billingId", "value": "{{billingId}}" }]
+        },
+        "description": "Delete a billing request. Only allowed when status is HELD."
+      },
+      "response": [
+        {
+          "name": "200 OK",
+          "originalRequest": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/consignment/api/customer-billing/{{billingId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["consignment", "api", "customer-billing", "{{billingId}}"]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "cookie": [],
+          "body": "{\n  \"message\": \"Customer billing request deleted\",\n  \"status\": 200\n}"
+        },
+        {
+          "name": "400 Not HELD",
+          "originalRequest": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/consignment/api/customer-billing/{{billingId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["consignment", "api", "customer-billing", "{{billingId}}"]
+            }
+          },
+          "status": "Bad Request",
+          "code": 400,
+          "_postman_previewlanguage": "json",
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "cookie": [],
+          "body": "{\n  \"message\": \"Only HELD billing request can be deleted\",\n  \"status\": 400\n}"
+        }
+      ]
+    }
+  ]
+}

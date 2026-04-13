@@ -5,9 +5,12 @@ import com.consignment.service.model.cso.CsoRequest;
 import com.consignment.service.model.cso.CsoResponse;
 import com.consignment.service.model.cso.CsoSearchCriteria;
 import com.consignment.service.model.cso.CsoUpdateRequest;
+import com.consignment.service.pdf.CsoSlipService;
 import com.consignment.service.service.CsoService;
 import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,9 +23,11 @@ import java.util.List;
 public class CsoController {
 
     private final CsoService csoService;
+    private final CsoSlipService csoSlipService;
 
-    public CsoController(CsoService csoService) {
+    public CsoController(CsoService csoService, CsoSlipService csoSlipService) {
         this.csoService = csoService;
+        this.csoSlipService = csoSlipService;
     }
 
     @GetMapping("/api/cso")
@@ -81,5 +86,16 @@ public class CsoController {
     public ResponseEntity<ApiResponse<CsoResponse>> autoCreate(@Valid @RequestBody CsoRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("CSO auto-created", csoService.autoCreate(request)));
+    }
+
+    @GetMapping("/api/cso/{id}/slip")
+    public ResponseEntity<byte[]> printSlip(@PathVariable String id) {
+        byte[] pdf = csoSlipService.generate(id);
+        String filename = "CSO-" + id + ".pdf";
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .header("X-Filename", filename)
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdf);
     }
 }

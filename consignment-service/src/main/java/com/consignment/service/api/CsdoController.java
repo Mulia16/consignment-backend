@@ -5,8 +5,11 @@ import com.consignment.service.model.csdo.CsdoResponse;
 import com.consignment.service.model.csdo.CsdoSearchCriteria;
 import com.consignment.service.model.csdo.CsdoTransferRequest;
 import com.consignment.service.model.csdo.CsdoUpdateRequest;
+import com.consignment.service.pdf.CsdoSlipService;
 import com.consignment.service.service.CsdoService;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -18,9 +21,11 @@ import java.util.List;
 public class CsdoController {
 
     private final CsdoService csdoService;
+    private final CsdoSlipService csdoSlipService;
 
-    public CsdoController(CsdoService csdoService) {
+    public CsdoController(CsdoService csdoService, CsdoSlipService csdoSlipService) {
         this.csdoService = csdoService;
+        this.csdoSlipService = csdoSlipService;
     }
 
     @GetMapping
@@ -67,5 +72,16 @@ public class CsdoController {
     @PutMapping("/{id}/reverse")
     public ResponseEntity<ApiResponse<CsdoResponse>> reverseCorrection(@PathVariable String id) {
         return ResponseEntity.ok(ApiResponse.success(csdoService.reverseCorrection(id)));
+    }
+
+    @GetMapping("/{id}/slip")
+    public ResponseEntity<byte[]> printSlip(@PathVariable String id) {
+        byte[] pdf = csdoSlipService.generate(id);
+        String filename = "CSDO-" + id + ".pdf";
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .header("X-Filename", filename)
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdf);
     }
 }

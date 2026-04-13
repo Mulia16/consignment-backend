@@ -5,8 +5,11 @@ import com.consignment.service.model.csrq.CsrqRequest;
 import com.consignment.service.model.csrq.CsrqResponse;
 import com.consignment.service.model.csrq.CsrqSearchCriteria;
 import com.consignment.service.model.csrq.CsrqUpdateRequest;
+import com.consignment.service.pdf.CsrqSlipService;
 import com.consignment.service.service.CsrqService;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -18,9 +21,11 @@ import java.util.List;
 public class CsrqController {
 
     private final CsrqService csrqService;
+    private final CsrqSlipService csrqSlipService;
 
-    public CsrqController(CsrqService csrqService) {
+    public CsrqController(CsrqService csrqService, CsrqSlipService csrqSlipService) {
         this.csrqService = csrqService;
+        this.csrqSlipService = csrqSlipService;
     }
 
     @GetMapping
@@ -70,5 +75,16 @@ public class CsrqController {
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable String id) {
         csrqService.delete(id);
         return ResponseEntity.ok(ApiResponse.ok("CSRQ deleted", null));
+    }
+
+    @GetMapping("/{id}/slip")
+    public ResponseEntity<byte[]> printSlip(@PathVariable String id) {
+        byte[] pdf = csrqSlipService.generate(id);
+        String filename = "CSRQ-" + id + ".pdf";
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .header("X-Filename", filename)
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdf);
     }
 }
