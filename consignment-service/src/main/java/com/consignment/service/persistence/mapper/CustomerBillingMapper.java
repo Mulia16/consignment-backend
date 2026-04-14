@@ -8,7 +8,6 @@ import org.apache.ibatis.annotations.Param;
 
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.time.LocalDate;
 import java.util.List;
 
 @Mapper
@@ -27,14 +26,4 @@ public interface CustomerBillingMapper {
                                @Param("actualReturnQty") BigDecimal actualReturnQty);
     void deleteById(@Param("id") String id);
     Long findMaxDocNoNumber();
-
-    /** Query unpost_staging_inventory for a store+customer to compute sales/return qty */
-    List<UnpostRow> findUnpostByStoreAndCustomer(
-            @Param("store") String store,
-            @Param("customerCode") String customerCode,
-            @Param("fromDate") LocalDate fromDate,
-            @Param("toDate") LocalDate toDate
-    );
-
-    record UnpostRow(String sku, String location, BigDecimal salesQty, BigDecimal returnQty) {}
 }

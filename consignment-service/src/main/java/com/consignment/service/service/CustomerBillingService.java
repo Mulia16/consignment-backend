@@ -4,10 +4,12 @@ import com.consignment.service.exception.BusinessRuleViolationException;
 import com.consignment.service.exception.ResourceNotFoundException;
 import com.consignment.service.model.PageMeta;
 import com.consignment.service.model.billing.*;
+import com.consignment.service.persistence.mapper.ConsignmentUnpostMapper;
+import com.consignment.service.persistence.mapper.ConsignmentUnpostMapper.UnpostAggRow;
 import com.consignment.service.persistence.mapper.CustomerBillingMapper;
-import com.consignment.service.persistence.mapper.CustomerBillingMapper.UnpostRow;
 import com.consignment.service.persistence.model.CustomerBillingRequestDetailEntity;
 import com.consignment.service.persistence.model.CustomerBillingRequestEntity;
+import com.consignment.service.persistence.model.ConsignmentUnpostEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,31 +21,59 @@ import java.util.UUID;
 @Service
 public class CustomerBillingService {
 
-    private static final String STATUS_HELD = "HELD";
+    private static final String STATUS_HELD     = "HELD";
     private static final String STATUS_RELEASED = "RELEASED";
     private static final String PROCESS_COMPLETED = "COMPLETED";
 
-    private final CustomerBillingMapper mapper;
+    private final CustomerBillingMapper billingMapper;
+    private final ConsignmentUnpostMapper unpostMapper;
     private final PricingService pricingService;
 
-    public CustomerBillingService(CustomerBillingMapper mapper, PricingService pricingService) {
-        this.mapper = mapper;
+    public CustomerBillingService(CustomerBillingMapper billingMapper,
+                                  ConsignmentUnpostMapper unpostMapper,
+                                  PricingService pricingService) {
+        this.billingMapper = billingMapper;
+        this.unpostMapper  = unpostMapper;
         this.pricingService = pricingService;
     }
 
     public record PagedResult(List<CustomerBillingResponse> items, PageMeta meta) {}
 
-    /**
-     * Compute customer consignment billing request.
-     * Reads unpost_staging_inventory for the store (filtered by customer if provided),
-     * calculates billingQty = salesQty - returnQty, and creates a new billing document.
-     */
+    // ── ACMM Sync: receive unpost sales from POS / B2B / Online ──────────────
+
+    @Transactional
+    public int syncUnpostSales(UnpostSalesSyncRequest request) {
+        for (UnpostSalesSyncRequest.UnpostSalesLine line : request.lines()) {
+            ConsignmentUnpostEntity entity = new ConsignmentUnpostEntity();
+            entity.setStore(line.store());
+            entity.setSku(line.sku());
+            entity.setSalesQty(line.salesQty());
+            entity.setSalesReturnQty(line.salesReturnQty());
+            entity.setSalesDate(line.salesDate());
+            entity.setSourceType(line.sourceType());
+            entity.setSourceRef(line.sourceRef());
+            unpostMapper.insert(entity);
+        }
+        return request.lines().size();
+    }
+
+    // ── Compute CBR ───────────────────────────────────────────────────────────
+
     @Transactional
     public CustomerBillingResponse compute(CustomerBillingComputeRequest request) {
-        // Query unpost staging inventory
-        List<UnpostRow> unpostRows = mapper.findUnpostByStoreAndCustomer(
-                request.store(), request.customerCode(),
-                request.fromDate(), request.toDate());
+        // Prevent duplicate: check if CBR already exists for same store+period
+        long existing = unpostMapper.countUnsettledCbr(
+                request.store(), request.fromDate(), request.toDate());
+        if (existing > 0) {
+            throw new BusinessRuleViolationException(
+                    "A billing request already exists for store " + request.store()
+                    + " period " + request.fromDate() + " to " + request.toDate()
+                    + ". Delete the existing HELD document before recomputing.");
+        }
+
+        // Aggregate unsettled unpost rows for this store+period
+        List<UnpostAggRow> rows = unpostMapper.aggregateUnsettled(
+                request.store(), request.fromDate(), request.toDate());
 
         // Build header
         CustomerBillingRequestEntity header = new CustomerBillingRequestEntity();
@@ -57,21 +87,18 @@ public class CustomerBillingService {
         header.setStatus(STATUS_HELD);
         header.setProcessStatus(PROCESS_COMPLETED);
         header.setCreatedBy(request.createdBy());
-        mapper.insertHeader(header);
+        billingMapper.insertHeader(header);
 
-        // Build details from unpost rows
-        for (UnpostRow row : unpostRows) {
-            BigDecimal salesQty  = row.salesQty()  != null ? row.salesQty()  : BigDecimal.ZERO;
-            BigDecimal returnQty = row.returnQty() != null ? row.returnQty() : BigDecimal.ZERO;
+        // Build detail lines from aggregated unpost
+        for (UnpostAggRow row : rows) {
+            BigDecimal salesQty   = row.totalSales()  != null ? row.totalSales()  : BigDecimal.ZERO;
+            BigDecimal returnQty  = row.totalReturn() != null ? row.totalReturn() : BigDecimal.ZERO;
             BigDecimal billingQty = salesQty.subtract(returnQty);
 
-            // Resolve unit price
             BigDecimal unitPrice = pricingService.resolveUnitPrice(
                     row.sku(), null, request.store(), null, null, request.customerCode());
-
             BigDecimal lineAmount = unitPrice != null
-                    ? billingQty.multiply(unitPrice)
-                    : BigDecimal.ZERO;
+                    ? billingQty.multiply(unitPrice) : BigDecimal.ZERO;
 
             CustomerBillingRequestDetailEntity detail = new CustomerBillingRequestDetailEntity();
             detail.setId(UUID.randomUUID().toString());
@@ -84,23 +111,24 @@ public class CustomerBillingService {
             detail.setBillingQty(billingQty);
             detail.setUnitPrice(unitPrice);
             detail.setLineAmount(lineAmount);
-            mapper.insertDetail(detail);
+            billingMapper.insertDetail(detail);
         }
 
         return getById(header.getId());
     }
 
+    // ── CRUD ──────────────────────────────────────────────────────────────────
+
     public PagedResult search(CustomerBillingSearchCriteria criteria) {
-        List<CustomerBillingResponse> items = mapper.search(criteria).stream()
-                .map(h -> toResponse(h, mapper.findDetailsByBillingId(h.getId())))
+        List<CustomerBillingResponse> items = billingMapper.search(criteria).stream()
+                .map(h -> toResponse(h, billingMapper.findDetailsByBillingId(h.getId())))
                 .toList();
-        long total = mapper.count(criteria);
+        long total = billingMapper.count(criteria);
         return new PagedResult(items, PageMeta.of(criteria.page(), criteria.perPage(), total));
     }
 
     public CustomerBillingResponse getById(String id) {
-        CustomerBillingRequestEntity header = loadHeader(id);
-        return toResponse(header, mapper.findDetailsByBillingId(id));
+        return toResponse(loadHeader(id), billingMapper.findDetailsByBillingId(id));
     }
 
     @Transactional
@@ -109,7 +137,11 @@ public class CustomerBillingService {
         if (!STATUS_HELD.equalsIgnoreCase(header.getStatus())) {
             throw new BusinessRuleViolationException("Only HELD billing request can be released");
         }
-        mapper.updateStatus(id, STATUS_RELEASED, Instant.now());
+        billingMapper.updateStatus(id, STATUS_RELEASED, Instant.now());
+
+        // Mark unpost rows as settled so they won't be included in next CBR
+        unpostMapper.markSettled(header.getStore(), header.getFromDate(), header.getToDate(), id);
+
         return getById(id);
     }
 
@@ -120,10 +152,10 @@ public class CustomerBillingService {
         if (!STATUS_RELEASED.equalsIgnoreCase(header.getStatus())) {
             throw new BusinessRuleViolationException("Actual return qty can only be updated after release");
         }
-        boolean exists = mapper.findDetailsByBillingId(id).stream()
+        boolean exists = billingMapper.findDetailsByBillingId(id).stream()
                 .anyMatch(d -> d.getId().equals(detailId));
         if (!exists) throw new ResourceNotFoundException("Billing detail not found: " + detailId);
-        mapper.updateActualReturnQty(detailId, request.actualReturnQty());
+        billingMapper.updateActualReturnQty(detailId, request.actualReturnQty());
         return getById(id);
     }
 
@@ -133,17 +165,20 @@ public class CustomerBillingService {
         if (!STATUS_HELD.equalsIgnoreCase(header.getStatus())) {
             throw new BusinessRuleViolationException("Only HELD billing request can be deleted");
         }
-        mapper.deleteById(id);
+        billingMapper.deleteById(id);
+        // After delete, unpost rows remain unsettled — user can recompute
     }
 
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
     private CustomerBillingRequestEntity loadHeader(String id) {
-        CustomerBillingRequestEntity h = mapper.findById(id);
+        CustomerBillingRequestEntity h = billingMapper.findById(id);
         if (h == null) throw new ResourceNotFoundException("Customer billing request not found: " + id);
         return h;
     }
 
     private String nextDocNo() {
-        Long max = mapper.findMaxDocNoNumber();
+        Long max = billingMapper.findMaxDocNoNumber();
         return "CBR-" + String.format("%05d", (max == null ? 0L : max) + 1L);
     }
 

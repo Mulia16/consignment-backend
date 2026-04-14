@@ -35,13 +35,6 @@
         <result property="actualReturnQty" column="actual_return_qty"/>
     </resultMap>
 
-    <resultMap id="UnpostResultMap" type="com.consignment.service.persistence.mapper.CustomerBillingMapper$UnpostRow">
-        <result property="sku" column="sku"/>
-        <result property="location" column="location"/>
-        <result property="salesQty" column="sales_qty"/>
-        <result property="returnQty" column="return_qty"/>
-    </resultMap>
-
     <insert id="insertHeader" parameterType="com.consignment.service.persistence.model.CustomerBillingRequestEntity">
         INSERT INTO customer_billing_request
             (id, doc_no, period_type, from_date, to_date, store, customer_code, customer_branch,
@@ -104,9 +97,9 @@
 
     <update id="updateStatus">
         UPDATE customer_billing_request
-        SET status = #{status},
+        SET status      = #{status},
             released_at = #{releasedAt},
-            updated_at = CURRENT_TIMESTAMP
+            updated_at  = CURRENT_TIMESTAMP
         WHERE id = #{id}
     </update>
 
@@ -123,20 +116,6 @@
     <select id="findMaxDocNoNumber" resultType="long">
         SELECT COALESCE(MAX(CAST(SUBSTRING(doc_no FROM 5) AS BIGINT)), 0)
         FROM customer_billing_request WHERE doc_no ~ '^CBR-[0-9]+$'
-    </select>
-
-    <!-- Query unpost staging inventory grouped by sku for a store+customer in date range -->
-    <select id="findUnpostByStoreAndCustomer" resultMap="UnpostResultMap">
-        SELECT sku, location, sales_qty, return_qty
-        FROM unpost_staging_inventory
-        WHERE location = #{store}
-        <if test="customerCode != null and customerCode != ''">
-            AND sku IN (
-                SELECT DISTINCT sku FROM customer_consignment_inventory
-                WHERE issue_from_store = #{store}
-                  AND customer_code = #{customerCode}
-            )
-        </if>
     </select>
 
 </mapper>

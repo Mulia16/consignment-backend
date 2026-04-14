@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.consignment.service.persistence.mapper.ConsignmentUnpostMapper">
+
+    <resultMap id="UnpostResultMap" type="com.consignment.service.persistence.model.ConsignmentUnpostEntity">
+        <id property="id" column="id"/>
+        <result property="store" column="store"/>
+        <result property="sku" column="sku"/>
+        <result property="salesQty" column="sales_qty"/>
+        <result property="salesReturnQty" column="sales_return_qty"/>
+        <result property="salesDate" column="sales_date"/>
+        <result property="sourceType" column="source_type"/>
+        <result property="sourceRef" column="source_ref"/>
+        <result property="settled" column="is_settled"/>
+        <result property="cbrId" column="cbr_id"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <resultMap id="AggResultMap" type="com.consignment.service.persistence.mapper.ConsignmentUnpostMapper$UnpostAggRow">
+        <constructor>
+            <arg column="store"        javaType="String"/>
+            <arg column="sku"          javaType="String"/>
+            <arg column="total_sales"  javaType="java.math.BigDecimal"/>
+            <arg column="total_return" javaType="java.math.BigDecimal"/>
+        </constructor>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.consignment.service.persistence.model.ConsignmentUnpostEntity">
+        INSERT INTO consignment_unpost
+            (store, sku, sales_qty, sales_return_qty, sales_date, source_type, source_ref, is_settled, created_at, updated_at)
+        VALUES
+            (#{store}, #{sku}, #{salesQty}, #{salesReturnQty}, #{salesDate}, #{sourceType}, #{sourceRef},
+             false, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    </insert>
+
+    <!-- Aggregate unsettled unpost rows by store+sku for a given date range -->
+    <select id="aggregateUnsettled" resultMap="AggResultMap">
+        SELECT
+            store,
+            sku,
+            SUM(sales_qty)        AS total_sales,
+            SUM(sales_return_qty) AS total_return
+        FROM consignment_unpost
+        WHERE is_settled = false
+          AND store = #{store}
+          AND sales_date &gt;= #{fromDate}
+          AND sales_date &lt;= #{toDate}
+        GROUP BY store, sku
+        ORDER BY store, sku
+    </select>
+
+    <!-- Mark all matching unpost rows as settled -->
+    <update id="markSettled">
+        UPDATE consignment_unpost
+        SET is_settled  = true,
+            cbr_id      = #{cbrId},
+            updated_at  = CURRENT_TIMESTAMP
+        WHERE is_settled = false
+          AND store      = #{store}
+          AND sales_date &gt;= #{fromDate}
+          AND sales_date &lt;= #{toDate}
+    </update>
+
+    <!-- Count existing HELD/RELEASED CBR for same store+period to prevent duplicate -->
+    <select id="countUnsettledCbr" resultType="long">
+        SELECT COUNT(id)
+        FROM customer_billing_request
+        WHERE store     = #{store}
+          AND from_date = #{fromDate}
+          AND to_date   = #{toDate}
+          AND status IN ('HELD', 'RELEASED')
+    </select>
+
+</mapper>
