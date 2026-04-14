@@ -58,8 +58,6 @@ services:
     build:
       context: .
       dockerfile: consignment-service/Dockerfile
-    ports:
-      - "8082:8082"
     networks:
       - consignment-network
     depends_on:

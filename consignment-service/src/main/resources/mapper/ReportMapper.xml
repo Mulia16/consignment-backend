@@ -4,41 +4,47 @@
 <mapper namespace="com.consignment.service.persistence.mapper.ReportMapper">
 
     <resultMap id="ReportRowMap" type="com.consignment.service.model.report.ReportRow">
-        <result property="docNo" column="doc_no"/>
-        <result property="documentType" column="document_type"/>
-        <result property="company" column="company"/>
-        <result property="store" column="store"/>
-        <result property="supplierCode" column="supplier_code"/>
-        <result property="supplierContract" column="supplier_contract"/>
-        <result property="customerCode" column="customer_code"/>
-        <result property="customerBranch" column="customer_branch"/>
-        <result property="itemCode" column="item_code"/>
-        <result property="qty" column="qty"/>
-        <result property="unitPrice" column="unit_price"/>
-        <result property="lineAmount" column="line_amount"/>
-        <result property="uom" column="uom"/>
-        <result property="status" column="status"/>
-        <result property="referenceNo" column="reference_no"/>
-        <result property="businessDate" column="business_date"/>
-        <result property="createdAt" column="created_at"/>
+        <constructor>
+            <arg column="doc_no"           javaType="String"/>
+            <arg column="document_type"    javaType="String"/>
+            <arg column="company"          javaType="String"/>
+            <arg column="store"            javaType="String"/>
+            <arg column="supplier_code"    javaType="String"/>
+            <arg column="supplier_contract" javaType="String"/>
+            <arg column="customer_code"    javaType="String"/>
+            <arg column="customer_branch"  javaType="String"/>
+            <arg column="item_code"        javaType="String"/>
+            <arg column="qty"              javaType="java.math.BigDecimal"/>
+            <arg column="unit_price"       javaType="java.math.BigDecimal"/>
+            <arg column="line_amount"      javaType="java.math.BigDecimal"/>
+            <arg column="uom"              javaType="String"/>
+            <arg column="status"           javaType="String"/>
+            <arg column="reference_no"     javaType="String"/>
+            <arg column="business_date"    javaType="java.time.LocalDate"/>
+            <arg column="created_at"       javaType="java.time.Instant"/>
+        </constructor>
     </resultMap>
 
     <resultMap id="StockSummaryRowMap" type="com.consignment.service.model.report.StockSummaryRow">
-        <result property="store" column="store"/>
-        <result property="supplierCode" column="supplier_code"/>
-        <result property="supplierContract" column="supplier_contract"/>
-        <result property="itemCode" column="sku"/>
-        <result property="purchaseQty" column="purchase_qty"/>
-        <result property="closingQty" column="closing_qty"/>
-        <result property="unbillQty" column="unbill_qty"/>
+        <constructor>
+            <arg column="store"             javaType="String"/>
+            <arg column="supplier_code"     javaType="String"/>
+            <arg column="supplier_contract" javaType="String"/>
+            <arg column="sku"               javaType="String"/>
+            <arg column="purchase_qty"      javaType="java.math.BigDecimal"/>
+            <arg column="closing_qty"       javaType="java.math.BigDecimal"/>
+            <arg column="unbill_qty"        javaType="java.math.BigDecimal"/>
+        </constructor>
     </resultMap>
 
     <resultMap id="CustomerInventoryRowMap" type="com.consignment.service.model.report.CustomerInventoryRow">
-        <result property="issueFromStore" column="issue_from_store"/>
-        <result property="customerCode" column="customer_code"/>
-        <result property="branchCode" column="branch_code"/>
-        <result property="itemCode" column="sku"/>
-        <result property="qty" column="qty"/>
+        <constructor>
+            <arg column="issue_from_store" javaType="String"/>
+            <arg column="customer_code"    javaType="String"/>
+            <arg column="branch_code"      javaType="String"/>
+            <arg column="sku"              javaType="String"/>
+            <arg column="qty"              javaType="java.math.BigDecimal"/>
+        </constructor>
     </resultMap>
 
     <!-- R01: CSRQ -->
@@ -51,12 +57,12 @@
                CAST(h.created_at AS DATE) AS business_date, h.created_at
         FROM csrq_header h
         JOIN csrq_detail d ON d.csrq_id = h.id
-        WHERE (#{company} IS NULL OR h.company = #{company})
-          AND (#{store} IS NULL OR h.store = #{store})
-          AND (#{supplierCode} IS NULL OR h.supplier_code = #{supplierCode})
-          AND (#{status} IS NULL OR h.status = #{status})
-          AND (#{fromDate} IS NULL OR CAST(h.created_at AS DATE) >= #{fromDate})
-          AND (#{toDate} IS NULL OR CAST(h.created_at AS DATE) &lt;= #{toDate})
+        WHERE (#{company,jdbcType=VARCHAR} IS NULL OR h.company = #{company,jdbcType=VARCHAR})
+          AND (#{store,jdbcType=VARCHAR} IS NULL OR h.store = #{store,jdbcType=VARCHAR})
+          AND (#{supplierCode,jdbcType=VARCHAR} IS NULL OR h.supplier_code = #{supplierCode,jdbcType=VARCHAR})
+          AND (#{status,jdbcType=VARCHAR} IS NULL OR h.status = #{status,jdbcType=VARCHAR})
+          AND (#{fromDate,jdbcType=DATE} IS NULL OR CAST(h.created_at AS DATE) >= #{fromDate,jdbcType=DATE})
+          AND (#{toDate,jdbcType=DATE} IS NULL OR CAST(h.created_at AS DATE) &lt;= #{toDate,jdbcType=DATE})
         ORDER BY h.created_at DESC
     </select>
 
@@ -70,12 +76,12 @@
                CAST(h.created_at AS DATE) AS business_date, h.created_at
         FROM csrv_header h
         JOIN csrv_detail d ON d.csrv_id = h.id
-        WHERE (#{company} IS NULL OR h.company = #{company})
-          AND (#{store} IS NULL OR h.receiving_store = #{store})
-          AND (#{supplierCode} IS NULL OR h.supplier_code = #{supplierCode})
-          AND (#{status} IS NULL OR h.status = #{status})
-          AND (#{fromDate} IS NULL OR CAST(h.created_at AS DATE) >= #{fromDate})
-          AND (#{toDate} IS NULL OR CAST(h.created_at AS DATE) &lt;= #{toDate})
+        WHERE (#{company,jdbcType=VARCHAR} IS NULL OR h.company = #{company,jdbcType=VARCHAR})
+          AND (#{store,jdbcType=VARCHAR} IS NULL OR h.receiving_store = #{store,jdbcType=VARCHAR})
+          AND (#{supplierCode,jdbcType=VARCHAR} IS NULL OR h.supplier_code = #{supplierCode,jdbcType=VARCHAR})
+          AND (#{status,jdbcType=VARCHAR} IS NULL OR h.status = #{status,jdbcType=VARCHAR})
+          AND (#{fromDate,jdbcType=DATE} IS NULL OR CAST(h.created_at AS DATE) >= #{fromDate,jdbcType=DATE})
+          AND (#{toDate,jdbcType=DATE} IS NULL OR CAST(h.created_at AS DATE) &lt;= #{toDate,jdbcType=DATE})
         ORDER BY h.created_at DESC
     </select>
 
@@ -89,12 +95,12 @@
                CAST(h.created_at AS DATE) AS business_date, h.created_at
         FROM cso_header h
         JOIN cso_detail d ON d.cso_id = h.id
-        WHERE (#{company} IS NULL OR h.company = #{company})
-          AND (#{store} IS NULL OR h.store = #{store})
-          AND (#{customerCode} IS NULL OR h.customer_code = #{customerCode})
-          AND (#{status} IS NULL OR h.status = #{status})
-          AND (#{fromDate} IS NULL OR CAST(h.created_at AS DATE) >= #{fromDate})
-          AND (#{toDate} IS NULL OR CAST(h.created_at AS DATE) &lt;= #{toDate})
+        WHERE (#{company,jdbcType=VARCHAR} IS NULL OR h.company = #{company,jdbcType=VARCHAR})
+          AND (#{store,jdbcType=VARCHAR} IS NULL OR h.store = #{store,jdbcType=VARCHAR})
+          AND (#{customerCode,jdbcType=VARCHAR} IS NULL OR h.customer_code = #{customerCode,jdbcType=VARCHAR})
+          AND (#{status,jdbcType=VARCHAR} IS NULL OR h.status = #{status,jdbcType=VARCHAR})
+          AND (#{fromDate,jdbcType=DATE} IS NULL OR CAST(h.created_at AS DATE) >= #{fromDate,jdbcType=DATE})
+          AND (#{toDate,jdbcType=DATE} IS NULL OR CAST(h.created_at AS DATE) &lt;= #{toDate,jdbcType=DATE})
         ORDER BY h.created_at DESC
     </select>
 
@@ -108,16 +114,16 @@
                CAST(h.created_at AS DATE) AS business_date, h.created_at
         FROM csdo_header h
         JOIN csdo_detail d ON d.csdo_id = h.id
-        WHERE (#{company} IS NULL OR h.company = #{company})
-          AND (#{store} IS NULL OR h.store = #{store})
-          AND (#{customerCode} IS NULL OR h.customer_code = #{customerCode})
-          AND (#{status} IS NULL OR h.status = #{status})
-          AND (#{fromDate} IS NULL OR CAST(h.created_at AS DATE) >= #{fromDate})
-          AND (#{toDate} IS NULL OR CAST(h.created_at AS DATE) &lt;= #{toDate})
+        WHERE (#{company,jdbcType=VARCHAR} IS NULL OR h.company = #{company,jdbcType=VARCHAR})
+          AND (#{store,jdbcType=VARCHAR} IS NULL OR h.store = #{store,jdbcType=VARCHAR})
+          AND (#{customerCode,jdbcType=VARCHAR} IS NULL OR h.customer_code = #{customerCode,jdbcType=VARCHAR})
+          AND (#{status,jdbcType=VARCHAR} IS NULL OR h.status = #{status,jdbcType=VARCHAR})
+          AND (#{fromDate,jdbcType=DATE} IS NULL OR CAST(h.created_at AS DATE) >= #{fromDate,jdbcType=DATE})
+          AND (#{toDate,jdbcType=DATE} IS NULL OR CAST(h.created_at AS DATE) &lt;= #{toDate,jdbcType=DATE})
         ORDER BY h.created_at DESC
     </select>
 
-    <!-- R05: CSR -->
+    <!-- R05: CSR (table renamed to csrn via V7 migration) -->
     <select id="reportCsr" resultMap="ReportRowMap">
         SELECT h.doc_no, 'CSR' AS document_type, h.company, h.store,
                h.supplier_code, h.supplier_contract,
@@ -126,14 +132,14 @@
                NULL AS unit_price, NULL AS line_amount,
                d.uom, h.status, h.reference_no,
                CAST(h.created_at AS DATE) AS business_date, h.created_at
-        FROM csr_header h
-        JOIN csr_detail d ON d.csr_id = h.id
-        WHERE (#{company} IS NULL OR h.company = #{company})
-          AND (#{store} IS NULL OR h.store = #{store})
-          AND (#{supplierCode} IS NULL OR h.supplier_code = #{supplierCode})
-          AND (#{status} IS NULL OR h.status = #{status})
-          AND (#{fromDate} IS NULL OR CAST(h.created_at AS DATE) >= #{fromDate})
-          AND (#{toDate} IS NULL OR CAST(h.created_at AS DATE) &lt;= #{toDate})
+        FROM csrn_header h
+        JOIN csrn_detail d ON d.csrn_id = h.id
+        WHERE (#{company,jdbcType=VARCHAR} IS NULL OR h.company = #{company,jdbcType=VARCHAR})
+          AND (#{store,jdbcType=VARCHAR} IS NULL OR h.store = #{store,jdbcType=VARCHAR})
+          AND (#{supplierCode,jdbcType=VARCHAR} IS NULL OR h.supplier_code = #{supplierCode,jdbcType=VARCHAR})
+          AND (#{status,jdbcType=VARCHAR} IS NULL OR h.status = #{status,jdbcType=VARCHAR})
+          AND (#{fromDate,jdbcType=DATE} IS NULL OR CAST(h.created_at AS DATE) >= #{fromDate,jdbcType=DATE})
+          AND (#{toDate,jdbcType=DATE} IS NULL OR CAST(h.created_at AS DATE) &lt;= #{toDate,jdbcType=DATE})
         ORDER BY h.created_at DESC
     </select>
 
@@ -147,12 +153,12 @@
                CAST(h.created_at AS DATE) AS business_date, h.created_at
         FROM csa_header h
         JOIN csa_detail d ON d.csa_id = h.id
-        WHERE (#{company} IS NULL OR h.company = #{company})
-          AND (#{store} IS NULL OR h.store = #{store})
-          AND (#{supplierCode} IS NULL OR h.supplier_code = #{supplierCode})
-          AND (#{status} IS NULL OR h.status = #{status})
-          AND (#{fromDate} IS NULL OR CAST(h.created_at AS DATE) >= #{fromDate})
-          AND (#{toDate} IS NULL OR CAST(h.created_at AS DATE) &lt;= #{toDate})
+        WHERE (#{company,jdbcType=VARCHAR} IS NULL OR h.company = #{company,jdbcType=VARCHAR})
+          AND (#{store,jdbcType=VARCHAR} IS NULL OR h.store = #{store,jdbcType=VARCHAR})
+          AND (#{supplierCode,jdbcType=VARCHAR} IS NULL OR h.supplier_code = #{supplierCode,jdbcType=VARCHAR})
+          AND (#{status,jdbcType=VARCHAR} IS NULL OR h.status = #{status,jdbcType=VARCHAR})
+          AND (#{fromDate,jdbcType=DATE} IS NULL OR CAST(h.created_at AS DATE) >= #{fromDate,jdbcType=DATE})
+          AND (#{toDate,jdbcType=DATE} IS NULL OR CAST(h.created_at AS DATE) &lt;= #{toDate,jdbcType=DATE})
         ORDER BY h.created_at DESC
     </select>
 
@@ -166,12 +172,12 @@
                h.currency AS uom, h.status, h.reference_no,
                CAST(h.created_at AS DATE) AS business_date, h.created_at
         FROM settlement_request_header h
-        WHERE (#{company} IS NULL OR h.company = #{company})
-          AND (#{store} IS NULL OR h.store = #{store})
-          AND (#{settlementType} IS NULL OR h.settlement_type = #{settlementType})
-          AND (#{status} IS NULL OR h.status = #{status})
-          AND (#{fromDate} IS NULL OR CAST(h.created_at AS DATE) >= #{fromDate})
-          AND (#{toDate} IS NULL OR CAST(h.created_at AS DATE) &lt;= #{toDate})
+        WHERE (#{company,jdbcType=VARCHAR} IS NULL OR h.company = #{company,jdbcType=VARCHAR})
+          AND (#{store,jdbcType=VARCHAR} IS NULL OR h.store = #{store,jdbcType=VARCHAR})
+          AND (#{settlementType,jdbcType=VARCHAR} IS NULL OR h.settlement_type = #{settlementType,jdbcType=VARCHAR})
+          AND (#{status,jdbcType=VARCHAR} IS NULL OR h.status = #{status,jdbcType=VARCHAR})
+          AND (#{fromDate,jdbcType=DATE} IS NULL OR CAST(h.created_at AS DATE) >= #{fromDate,jdbcType=DATE})
+          AND (#{toDate,jdbcType=DATE} IS NULL OR CAST(h.created_at AS DATE) &lt;= #{toDate,jdbcType=DATE})
         ORDER BY h.created_at DESC
     </select>
 
@@ -185,7 +191,7 @@
                CAST(d.created_at AS DATE) AS business_date, d.created_at
         FROM settlement_request_detail d
         JOIN settlement_request_header h ON h.id = d.settlement_id
-        WHERE d.settlement_id = #{settlementId}
+        WHERE d.settlement_id = #{settlementId,jdbcType=VARCHAR}
         ORDER BY d.created_at ASC
     </select>
 
@@ -196,10 +202,10 @@
         FROM supplier_book_value_inventory b
         JOIN consignment_external_supplier s ON s.supplier_code = b.supplier_code
             AND s.consignee_store = b.store
-        WHERE (#{company} IS NULL OR s.consignee_company = #{company})
-          AND (#{store} IS NULL OR b.store = #{store})
-          AND (#{supplierCode} IS NULL OR b.supplier_code = #{supplierCode})
-          AND (#{supplierContract} IS NULL OR b.supplier_contract = #{supplierContract})
+        WHERE (#{company,jdbcType=VARCHAR} IS NULL OR s.consignee_company = #{company,jdbcType=VARCHAR})
+          AND (#{store,jdbcType=VARCHAR} IS NULL OR b.store = #{store,jdbcType=VARCHAR})
+          AND (#{supplierCode,jdbcType=VARCHAR} IS NULL OR b.supplier_code = #{supplierCode,jdbcType=VARCHAR})
+          AND (#{supplierContract,jdbcType=VARCHAR} IS NULL OR b.supplier_contract = #{supplierContract,jdbcType=VARCHAR})
         ORDER BY b.store, b.supplier_code, b.sku
     </select>
 
@@ -207,8 +213,8 @@
     <select id="reportCustomerInventory" resultMap="CustomerInventoryRowMap">
         SELECT issue_from_store, customer_code, branch_code, sku, qty
         FROM customer_consignment_inventory
-        WHERE (#{store} IS NULL OR issue_from_store = #{store})
-          AND (#{customerCode} IS NULL OR customer_code = #{customerCode})
+        WHERE (#{store,jdbcType=VARCHAR} IS NULL OR issue_from_store = #{store,jdbcType=VARCHAR})
+          AND (#{customerCode,jdbcType=VARCHAR} IS NULL OR customer_code = #{customerCode,jdbcType=VARCHAR})
           AND qty != 0
         ORDER BY issue_from_store, customer_code, sku
     </select>
@@ -224,8 +230,8 @@
                r.reservation_type AS uom, NULL AS status, NULL AS reference_no,
                CAST(r.created_at AS DATE) AS business_date, r.created_at
         FROM consignment_reservation r
-        WHERE (#{store} IS NULL OR r.store = #{store})
-          AND (#{itemCode} IS NULL OR r.sku = #{itemCode})
+        WHERE (#{store,jdbcType=VARCHAR} IS NULL OR r.store = #{store,jdbcType=VARCHAR})
+          AND (#{itemCode,jdbcType=VARCHAR} IS NULL OR r.sku = #{itemCode,jdbcType=VARCHAR})
         ORDER BY r.store, r.sku, r.created_at
     </select>
 
@@ -241,9 +247,9 @@
                NULL AS business_date, s.created_at,
                NULL AS doc_no, NULL AS reference_no
         FROM consignment_external_supplier s
-        WHERE (#{company} IS NULL OR s.consignee_company = #{company})
-          AND (#{store} IS NULL OR s.consignee_store = #{store})
-          AND (#{supplierCode} IS NULL OR s.supplier_code = #{supplierCode})
+        WHERE (#{company,jdbcType=VARCHAR} IS NULL OR s.consignee_company = #{company,jdbcType=VARCHAR})
+          AND (#{store,jdbcType=VARCHAR} IS NULL OR s.consignee_store = #{store,jdbcType=VARCHAR})
+          AND (#{supplierCode,jdbcType=VARCHAR} IS NULL OR s.supplier_code = #{supplierCode,jdbcType=VARCHAR})
         ORDER BY s.item_code, s.supplier_code
     </select>
 
