@@ -24,6 +24,7 @@ public class CustomerBillingService {
     private static final String STATUS_HELD     = "HELD";
     private static final String STATUS_RELEASED = "RELEASED";
     private static final String PROCESS_COMPLETED = "COMPLETED";
+    private static final String PROCESS_FAILED   = "FAILED";
 
     private final CustomerBillingMapper billingMapper;
     private final ConsignmentUnpostMapper unpostMapper;
@@ -79,11 +80,25 @@ public class CustomerBillingService {
         CustomerBillingRequestEntity header = new CustomerBillingRequestEntity();
         header.setId(UUID.randomUUID().toString());
         header.setDocNo(nextDocNo());
+        header.setCompany(request.company());
         header.setPeriodType(request.periodType());
         header.setFromDate(request.fromDate());
         header.setToDate(request.toDate());
         header.setStore(request.store());
         header.setCustomerCode(request.customerCode());
+        header.setProcessDate(Instant.now());
+
+        if (rows.isEmpty()) {
+            // No unpost data found — record as FAILED with reason
+            header.setStatus(STATUS_HELD);
+            header.setProcessStatus(PROCESS_FAILED);
+            header.setErrorReason("No unsettled consignment unpost data found for store "
+                    + request.store() + " in period " + request.fromDate() + " to " + request.toDate());
+            header.setCreatedBy(request.createdBy());
+            billingMapper.insertHeader(header);
+            return getById(header.getId());
+        }
+
         header.setStatus(STATUS_HELD);
         header.setProcessStatus(PROCESS_COMPLETED);
         header.setCreatedBy(request.createdBy());
@@ -131,6 +146,30 @@ public class CustomerBillingService {
         return toResponse(loadHeader(id), billingMapper.findDetailsByBillingId(id));
     }
 
+    /** Search failed CBR records (processStatus = FAILED) for the failed records screen */
+    public PagedResult searchFailed(CustomerBillingSearchCriteria criteria) {
+        CustomerBillingSearchCriteria failedCriteria = new CustomerBillingSearchCriteria(
+                criteria.docNo(), criteria.company(), criteria.store(),
+                criteria.customerCode(), criteria.customerBranch(), criteria.periodType(),
+                criteria.status(), PROCESS_FAILED,
+                criteria.fromDate(), criteria.toDate(), criteria.page(), criteria.perPage());
+        return search(failedCriteria);
+    }
+
+    /**
+     * Confirm a FAILED CBR — marks it as COMPLETED so it moves out of the failed list.
+     * User acknowledges the failure and confirms the record.
+     */
+    @Transactional
+    public CustomerBillingResponse confirmFailed(String id) {
+        CustomerBillingRequestEntity header = loadHeader(id);
+        if (!PROCESS_FAILED.equalsIgnoreCase(header.getProcessStatus())) {
+            throw new BusinessRuleViolationException("Only FAILED billing request can be confirmed");
+        }
+        billingMapper.updateProcessStatus(id, PROCESS_COMPLETED);
+        return getById(id);
+    }
+
     @Transactional
     public CustomerBillingResponse release(String id) {
         CustomerBillingRequestEntity header = loadHeader(id);
@@ -165,10 +204,23 @@ public class CustomerBillingService {
         if (!STATUS_HELD.equalsIgnoreCase(header.getStatus())) {
             throw new BusinessRuleViolationException("Only HELD billing request can be deleted");
         }
+        if (PROCESS_FAILED.equalsIgnoreCase(header.getProcessStatus())) {
+            throw new BusinessRuleViolationException(
+                    "FAILED billing request must be deleted via DELETE /api/customer-billing/{id}/failed");
+        }
         billingMapper.deleteById(id);
         // After delete, unpost rows remain unsettled — user can recompute
     }
 
+    /** Delete a FAILED CBR record — only allowed when processStatus = FAILED */
+    @Transactional
+    public void deleteFailed(String id) {
+        CustomerBillingRequestEntity header = loadHeader(id);
+        if (!PROCESS_FAILED.equalsIgnoreCase(header.getProcessStatus())) {
+            throw new BusinessRuleViolationException("Only FAILED billing request can be deleted via this endpoint");
+        }
+        billingMapper.deleteById(id);
+    }
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private CustomerBillingRequestEntity loadHeader(String id) {
@@ -191,9 +243,11 @@ public class CustomerBillingService {
                         d.getBillingQty(), d.getUnitPrice(), d.getLineAmount(), d.getActualReturnQty()))
                 .toList();
         return new CustomerBillingResponse(
-                h.getId(), h.getDocNo(), h.getPeriodType(), h.getFromDate(), h.getToDate(),
+                h.getId(), h.getDocNo(), h.getCompany(), h.getPeriodType(),
+                h.getFromDate(), h.getToDate(),
                 h.getStore(), h.getCustomerCode(), h.getCustomerBranch(),
-                h.getStatus(), h.getProcessStatus(), h.getCreatedBy(),
-                h.getReleasedAt(), h.getCreatedAt(), h.getUpdatedAt(), detailResponses);
+                h.getStatus(), h.getProcessStatus(), h.getErrorReason(), h.getProcessDate(),
+                h.getCreatedBy(), h.getReleasedAt(), h.getCreatedAt(), h.getUpdatedAt(),
+                detailResponses);
     }
 }

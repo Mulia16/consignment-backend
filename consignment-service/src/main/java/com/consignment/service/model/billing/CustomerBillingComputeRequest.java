@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
 
 public record CustomerBillingComputeRequest(
+        @NotBlank String company,
         @NotBlank String store,
         @NotNull LocalDate fromDate,
         @NotNull LocalDate toDate,

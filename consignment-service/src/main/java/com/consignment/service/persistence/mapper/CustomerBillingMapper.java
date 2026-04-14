@@ -22,6 +22,7 @@ public interface CustomerBillingMapper {
 
     void updateStatus(@Param("id") String id, @Param("status") String status,
                       @Param("releasedAt") Instant releasedAt);
+    void updateProcessStatus(@Param("id") String id, @Param("processStatus") String processStatus);
     void updateActualReturnQty(@Param("detailId") String detailId,
                                @Param("actualReturnQty") BigDecimal actualReturnQty);
     void deleteById(@Param("id") String id);

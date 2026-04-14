@@ -6,6 +6,7 @@
     <resultMap id="HeaderResultMap" type="com.consignment.service.persistence.model.CustomerBillingRequestEntity">
         <id property="id" column="id"/>
         <result property="docNo" column="doc_no"/>
+        <result property="company" column="company"/>
         <result property="periodType" column="period_type"/>
         <result property="fromDate" column="from_date"/>
         <result property="toDate" column="to_date"/>
@@ -14,6 +15,8 @@
         <result property="customerBranch" column="customer_branch"/>
         <result property="status" column="status"/>
         <result property="processStatus" column="process_status"/>
+        <result property="errorReason" column="error_reason"/>
+        <result property="processDate" column="process_date"/>
         <result property="createdBy" column="created_by"/>
         <result property="releasedAt" column="released_at"/>
         <result property="createdAt" column="created_at"/>
@@ -37,11 +40,11 @@
 
     <insert id="insertHeader" parameterType="com.consignment.service.persistence.model.CustomerBillingRequestEntity">
         INSERT INTO customer_billing_request
-            (id, doc_no, period_type, from_date, to_date, store, customer_code, customer_branch,
-             status, process_status, created_by, created_at, updated_at)
+            (id, doc_no, company, period_type, from_date, to_date, store, customer_code, customer_branch,
+             status, process_status, error_reason, process_date, created_by, created_at, updated_at)
         VALUES
-            (#{id}, #{docNo}, #{periodType}, #{fromDate}, #{toDate}, #{store}, #{customerCode}, #{customerBranch},
-             #{status}, #{processStatus}, #{createdBy}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            (#{id}, #{docNo}, #{company}, #{periodType}, #{fromDate}, #{toDate}, #{store}, #{customerCode}, #{customerBranch},
+             #{status}, #{processStatus}, #{errorReason}, #{processDate}, #{createdBy}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     </insert>
 
     <insert id="insertDetail" parameterType="com.consignment.service.persistence.model.CustomerBillingRequestDetailEntity">
@@ -54,14 +57,15 @@
     </insert>
 
     <select id="findById" resultMap="HeaderResultMap">
-        SELECT id, doc_no, period_type, from_date, to_date, store, customer_code, customer_branch,
-               status, process_status, created_by, released_at, created_at, updated_at
+        SELECT id, doc_no, company, period_type, from_date, to_date, store, customer_code, customer_branch,
+               status, process_status, error_reason, process_date, created_by, released_at, created_at, updated_at
         FROM customer_billing_request WHERE id = #{id}
     </select>
 
     <sql id="filterWhere">
         <where>
             <if test="c.docNo != null and c.docNo != ''">AND h.doc_no ILIKE CONCAT('%', #{c.docNo}, '%')</if>
+            <if test="c.company != null and c.company != ''">AND h.company = #{c.company}</if>
             <if test="c.store != null and c.store != ''">AND h.store = #{c.store}</if>
             <if test="c.customerCode != null and c.customerCode != ''">AND h.customer_code = #{c.customerCode}</if>
             <if test="c.customerBranch != null and c.customerBranch != ''">AND h.customer_branch = #{c.customerBranch}</if>
@@ -74,8 +78,8 @@
     </sql>
 
     <select id="search" resultMap="HeaderResultMap">
-        SELECT h.id, h.doc_no, h.period_type, h.from_date, h.to_date, h.store, h.customer_code, h.customer_branch,
-               h.status, h.process_status, h.created_by, h.released_at, h.created_at, h.updated_at
+        SELECT h.id, h.doc_no, h.company, h.period_type, h.from_date, h.to_date, h.store, h.customer_code, h.customer_branch,
+               h.status, h.process_status, h.error_reason, h.process_date, h.created_by, h.released_at, h.created_at, h.updated_at
         FROM customer_billing_request h
         <include refid="filterWhere"/>
         ORDER BY h.created_at DESC
@@ -100,6 +104,13 @@
         SET status      = #{status},
             released_at = #{releasedAt},
             updated_at  = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
+    <update id="updateProcessStatus">
+        UPDATE customer_billing_request
+        SET process_status = #{processStatus},
+            updated_at     = CURRENT_TIMESTAMP
         WHERE id = #{id}
     </update>
 

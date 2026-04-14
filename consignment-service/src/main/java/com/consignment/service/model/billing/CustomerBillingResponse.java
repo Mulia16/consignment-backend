@@ -7,6 +7,7 @@ import java.util.List;
 public record CustomerBillingResponse(
         String id,
         String docNo,
+        String company,
         String periodType,
         LocalDate fromDate,
         LocalDate toDate,
@@ -15,6 +16,8 @@ public record CustomerBillingResponse(
         String customerBranch,
         String status,
         String processStatus,
+        String errorReason,
+        Instant processDate,
         String createdBy,
         Instant releasedAt,
         Instant createdAt,

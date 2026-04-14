@@ -6,6 +6,7 @@ import java.time.LocalDate;
 public class CustomerBillingRequestEntity {
     private String id;
     private String docNo;
+    private String company;
     private String periodType;
     private LocalDate fromDate;
     private LocalDate toDate;
@@ -14,6 +15,8 @@ public class CustomerBillingRequestEntity {
     private String customerBranch;
     private String status;
     private String processStatus;
+    private String errorReason;
+    private Instant processDate;
     private String createdBy;
     private Instant releasedAt;
     private Instant createdAt;
@@ -23,6 +26,8 @@ public class CustomerBillingRequestEntity {
     public void setId(String id) { this.id = id; }
     public String getDocNo() { return docNo; }
     public void setDocNo(String docNo) { this.docNo = docNo; }
+    public String getCompany() { return company; }
+    public void setCompany(String company) { this.company = company; }
     public String getPeriodType() { return periodType; }
     public void setPeriodType(String periodType) { this.periodType = periodType; }
     public LocalDate getFromDate() { return fromDate; }
@@ -39,6 +44,10 @@ public class CustomerBillingRequestEntity {
     public void setStatus(String status) { this.status = status; }
     public String getProcessStatus() { return processStatus; }
     public void setProcessStatus(String processStatus) { this.processStatus = processStatus; }
+    public String getErrorReason() { return errorReason; }
+    public void setErrorReason(String errorReason) { this.errorReason = errorReason; }
+    public Instant getProcessDate() { return processDate; }
+    public void setProcessDate(Instant processDate) { this.processDate = processDate; }
     public String getCreatedBy() { return createdBy; }
     public void setCreatedBy(String createdBy) { this.createdBy = createdBy; }
     public Instant getReleasedAt() { return releasedAt; }

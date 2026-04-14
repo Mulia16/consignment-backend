@@ -4,6 +4,7 @@ import java.time.LocalDate;
 
 public record CustomerBillingSearchCriteria(
         String docNo,
+        String company,
         String store,
         String customerCode,
         String customerBranch,

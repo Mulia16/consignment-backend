@@ -1,0 +1,211 @@
+{
+  "info": {
+    "name": "Customer Billing (CBR)",
+    "_postman_id": "cbr-collection-001",
+    "description": "Customer Consignment Billing Request — ACMM sync, compute, failed records, release, reprocess",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080", "type": "string" },
+    { "key": "cbrId",   "value": "", "type": "string" },
+    { "key": "detailId","value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "ACMM",
+      "item": [
+        {
+          "name": "Sync Unpost Sales (POS / B2B / Online)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/acmm/unpost-sales/sync", "host": ["{{baseUrl}}"], "path": ["api","acmm","unpost-sales","sync"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"lines\": [\n    {\n      \"store\": \"STORE01\",\n      \"sku\": \"ITEM001\",\n      \"salesQty\": 10.0,\n      \"salesReturnQty\": 1.0,\n      \"salesDate\": \"2026-04-10\",\n      \"sourceType\": \"POS\",\n      \"sourceRef\": \"POS-INV-9999\"\n    },\n    {\n      \"store\": \"STORE01\",\n      \"sku\": \"ITEM002\",\n      \"salesQty\": 5.0,\n      \"salesReturnQty\": 0.0,\n      \"salesDate\": \"2026-04-10\",\n      \"sourceType\": \"B2B\",\n      \"sourceRef\": \"B2B-ORD-9999\"\n    },\n    {\n      \"store\": \"STORE01\",\n      \"sku\": \"ITEM003\",\n      \"salesQty\": 8.0,\n      \"salesReturnQty\": 0.5,\n      \"salesDate\": \"2026-04-10\",\n      \"sourceType\": \"ONLINE\",\n      \"sourceRef\": \"ONL-ORD-9999\"\n    }\n  ]\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Customer Billing Request (CBR)",
+      "item": [
+        {
+          "name": "1. Compute CBR",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.data && json.data.id) {",
+                  "  pm.collectionVariables.set('cbrId', json.data.id);",
+                  "  var details = json.data.details;",
+                  "  if (details && details.length > 0) {",
+                  "    pm.collectionVariables.set('detailId', details[0].id);",
+                  "  }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/customer-billing/compute", "host": ["{{baseUrl}}"], "path": ["api","customer-billing","compute"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"company\": \"Alpro Pharmacy SDN BHD\",\n  \"store\": \"STORE01\",\n  \"fromDate\": \"2026-04-01\",\n  \"toDate\": \"2026-04-30\",\n  \"periodType\": \"MONTHLY\",\n  \"customerCode\": null,\n  \"createdBy\": \"admin\"\n}"
+            }
+          }
+        },
+        {
+          "name": "2. Get CBR by ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.data && json.data.details && json.data.details.length > 0) {",
+                  "  pm.collectionVariables.set('detailId', json.data.details[0].id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/customer-billing/{{cbrId}}", "host": ["{{baseUrl}}"], "path": ["api","customer-billing","{{cbrId}}"] }
+          }
+        },
+        {
+          "name": "3. Release CBR",
+          "request": {
+            "method": "PUT",
+            "url": { "raw": "{{baseUrl}}/api/customer-billing/{{cbrId}}/release", "host": ["{{baseUrl}}"], "path": ["api","customer-billing","{{cbrId}}","release"] }
+          }
+        },
+        {
+          "name": "4. Update Actual Return Qty",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/customer-billing/{{cbrId}}/detail/{{detailId}}/actual-return-qty", "host": ["{{baseUrl}}"], "path": ["api","customer-billing","{{cbrId}}","detail","{{detailId}}","actual-return-qty"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"actualReturnQty\": 2.0\n}"
+            }
+          }
+        },
+        {
+          "name": "Search CBR",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/customer-billing?company=Alpro Pharmacy SDN BHD&store=STORE01&status=HELD&page=1&perPage=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api","customer-billing"],
+              "query": [
+                { "key": "company",      "value": "Alpro Pharmacy SDN BHD" },
+                { "key": "store",        "value": "STORE01" },
+                { "key": "customerCode", "value": "", "disabled": true },
+                { "key": "status",       "value": "HELD" },
+                { "key": "processStatus","value": "", "disabled": true },
+                { "key": "periodType",   "value": "", "disabled": true },
+                { "key": "fromDate",     "value": "2026-04-01", "disabled": true },
+                { "key": "toDate",       "value": "2026-04-30", "disabled": true },
+                { "key": "page",         "value": "1" },
+                { "key": "perPage",      "value": "20" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Failed Records",
+      "item": [
+        {
+          "name": "Search Failed CBR",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/customer-billing/failed?page=1&perPage=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api","customer-billing","failed"],
+              "query": [
+                { "key": "company",      "value": "Alpro Pharmacy SDN BHD", "disabled": true },
+                { "key": "store",        "value": "", "disabled": true },
+                { "key": "customerCode", "value": "", "disabled": true },
+                { "key": "fromDate",     "value": "2026-04-01", "disabled": true },
+                { "key": "toDate",       "value": "2026-04-30", "disabled": true },
+                { "key": "page",         "value": "1" },
+                { "key": "perPage",      "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Confirm Failed CBR",
+          "request": {
+            "method": "PUT",
+            "url": { "raw": "{{baseUrl}}/api/customer-billing/{{cbrId}}/confirm-failed", "host": ["{{baseUrl}}"], "path": ["api","customer-billing","{{cbrId}}","confirm-failed"] }
+          }
+        },
+        {
+          "name": "Delete Failed CBR",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{baseUrl}}/api/customer-billing/{{cbrId}}/failed", "host": ["{{baseUrl}}"], "path": ["api","customer-billing","{{cbrId}}","failed"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reprocess",
+      "item": [
+        {
+          "name": "1. Delete HELD CBR",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{baseUrl}}/api/customer-billing/{{cbrId}}", "host": ["{{baseUrl}}"], "path": ["api","customer-billing","{{cbrId}}"] }
+          }
+        },
+        {
+          "name": "2. Recompute CBR",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.data && json.data.id) {",
+                  "  pm.collectionVariables.set('cbrId', json.data.id);",
+                  "  var details = json.data.details;",
+                  "  if (details && details.length > 0) {",
+                  "    pm.collectionVariables.set('detailId', details[0].id);",
+                  "  }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/customer-billing/compute", "host": ["{{baseUrl}}"], "path": ["api","customer-billing","compute"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"company\": \"Alpro Pharmacy SDN BHD\",\n  \"store\": \"STORE01\",\n  \"fromDate\": \"2026-04-01\",\n  \"toDate\": \"2026-04-30\",\n  \"periodType\": \"MONTHLY\",\n  \"customerCode\": null,\n  \"createdBy\": \"admin\"\n}"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
