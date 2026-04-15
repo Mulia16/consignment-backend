@@ -15,4 +15,12 @@ public interface SupplierBookValueInventoryMapper {
             @Param("supplierContract") String supplierContract,
             @Param("receivingQty") BigDecimal receivingQty
     );
+
+    /** Get total closing qty for a store+sku+supplier combination (display only) */
+    BigDecimal findClosingQty(
+            @Param("store") String store,
+            @Param("sku") String sku,
+            @Param("supplierCode") String supplierCode,
+            @Param("supplierContract") String supplierContract
+    );
 }

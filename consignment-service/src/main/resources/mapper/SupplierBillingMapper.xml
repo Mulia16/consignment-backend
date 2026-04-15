@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.consignment.service.persistence.mapper.SupplierBillingMapper">
+
+    <resultMap id="HeaderResultMap" type="com.consignment.service.persistence.model.SupplierBillingRequestEntity">
+        <id property="id" column="id"/>
+        <result property="docNo" column="doc_no"/>
+        <result property="company" column="company"/>
+        <result property="periodType" column="period_type"/>
+        <result property="fromDate" column="from_date"/>
+        <result property="toDate" column="to_date"/>
+        <result property="store" column="store"/>
+        <result property="supplierCode" column="supplier_code"/>
+        <result property="supplierContract" column="supplier_contract"/>
+        <result property="supplierType" column="supplier_type"/>
+        <result property="carryForwardDecimal" column="carry_forward_decimal"/>
+        <result property="status" column="status"/>
+        <result property="processStatus" column="process_status"/>
+        <result property="errorReason" column="error_reason"/>
+        <result property="processDate" column="process_date"/>
+        <result property="createdBy" column="created_by"/>
+        <result property="releasedAt" column="released_at"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <resultMap id="DetailResultMap" type="com.consignment.service.persistence.model.SupplierBillingRequestDetailEntity">
+        <id property="id" column="id"/>
+        <result property="billingId" column="billing_id"/>
+        <result property="itemCode" column="item_code"/>
+        <result property="uom" column="uom"/>
+        <result property="salesQty" column="sales_qty"/>
+        <result property="salesReturnQty" column="sales_return_qty"/>
+        <result property="bfQty" column="bf_qty"/>
+        <result property="billingQty" column="billing_qty"/>
+        <result property="cfQty" column="cf_qty"/>
+        <result property="unitCost" column="unit_cost"/>
+        <result property="totalCost" column="total_cost"/>
+        <result property="totalSupplierQty" column="total_supplier_qty"/>
+    </resultMap>
+
+    <insert id="insertHeader" parameterType="com.consignment.service.persistence.model.SupplierBillingRequestEntity">
+        INSERT INTO supplier_billing_request
+            (id, doc_no, company, period_type, from_date, to_date, store,
+             supplier_code, supplier_contract, supplier_type, carry_forward_decimal,
+             status, process_status, error_reason, process_date, created_by, created_at, updated_at)
+        VALUES
+            (#{id}, #{docNo}, #{company,jdbcType=VARCHAR}, #{periodType}, #{fromDate}, #{toDate},
+             #{store,jdbcType=VARCHAR}, #{supplierCode}, #{supplierContract,jdbcType=VARCHAR},
+             #{supplierType,jdbcType=VARCHAR}, #{carryForwardDecimal},
+             #{status}, #{processStatus}, #{errorReason,jdbcType=VARCHAR},
+             #{processDate,jdbcType=TIMESTAMP}, #{createdBy}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    </insert>
+
+    <insert id="insertDetail" parameterType="com.consignment.service.persistence.model.SupplierBillingRequestDetailEntity">
+        INSERT INTO supplier_billing_request_detail
+            (id, billing_id, item_code, uom, sales_qty, sales_return_qty,
+             bf_qty, billing_qty, cf_qty, unit_cost, total_cost, total_supplier_qty)
+        VALUES
+            (#{id}, #{billingId}, #{itemCode}, #{uom}, #{salesQty}, #{salesReturnQty},
+             #{bfQty}, #{billingQty}, #{cfQty},
+             #{unitCost,jdbcType=NUMERIC}, #{totalCost,jdbcType=NUMERIC},
+             #{totalSupplierQty,jdbcType=NUMERIC})
+    </insert>
+
+    <select id="findById" resultMap="HeaderResultMap">
+        SELECT id, doc_no, company, period_type, from_date, to_date, store,
+               supplier_code, supplier_contract, supplier_type, carry_forward_decimal,
+               status, process_status, error_reason, process_date, created_by,
+               released_at, created_at, updated_at
+        FROM supplier_billing_request
+        WHERE id = #{id}
+    </select>
+
+    <sql id="filterWhere">
+        <where>
+            <if test="c.docNo != null and c.docNo != ''">AND h.doc_no ILIKE CONCAT('%', #{c.docNo}, '%')</if>
+            <if test="c.company != null and c.company != ''">AND h.company = #{c.company}</if>
+            <if test="c.store != null and c.store != ''">AND h.store = #{c.store}</if>
+            <if test="c.supplierCode != null and c.supplierCode != ''">AND h.supplier_code = #{c.supplierCode}</if>
+            <if test="c.supplierContract != null and c.supplierContract != ''">AND h.supplier_contract = #{c.supplierContract}</if>
+            <if test="c.periodType != null and c.periodType != ''">AND h.period_type = #{c.periodType}</if>
+            <if test="c.status != null and c.status != ''">AND h.status = #{c.status}</if>
+            <if test="c.processStatus != null and c.processStatus != ''">AND h.process_status = #{c.processStatus}</if>
+            <if test="c.fromDate != null">AND h.from_date &gt;= #{c.fromDate}</if>
+            <if test="c.toDate != null">AND h.to_date &lt;= #{c.toDate}</if>
+        </where>
+    </sql>
+
+    <select id="search" resultMap="HeaderResultMap">
+        SELECT h.id, h.doc_no, h.company, h.period_type, h.from_date, h.to_date, h.store,
+               h.supplier_code, h.supplier_contract, h.supplier_type, h.carry_forward_decimal,
+               h.status, h.process_status, h.error_reason, h.process_date, h.created_by,
+               h.released_at, h.created_at, h.updated_at
+        FROM supplier_billing_request h
+        <include refid="filterWhere"/>
+        ORDER BY h.created_at DESC
+        LIMIT #{c.perPage} OFFSET #{c.offset}
+    </select>
+
+    <select id="count" resultType="long">
+        SELECT COUNT(h.id) FROM supplier_billing_request h
+        <include refid="filterWhere"/>
+    </select>
+
+    <select id="findDetailsByBillingId" resultMap="DetailResultMap">
+        SELECT id, billing_id, item_code, uom, sales_qty, sales_return_qty,
+               bf_qty, billing_qty, cf_qty, unit_cost, total_cost, total_supplier_qty
+        FROM supplier_billing_request_detail
+        WHERE billing_id = #{billingId}
+        ORDER BY item_code
+    </select>
+
+    <update id="updateStatus">
+        UPDATE supplier_billing_request
+        SET status      = #{status},
+            released_at = #{releasedAt},
+            updated_at  = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM supplier_billing_request WHERE id = #{id}
+    </delete>
+
+    <select id="findMaxDocNoNumber" resultType="long">
+        SELECT COALESCE(MAX(CAST(SUBSTRING(doc_no FROM 6) AS BIGINT)), 0)
+        FROM supplier_billing_request
+        WHERE doc_no ~ '^SCBR-[0-9]+'
+    </select>
+
+    <!-- Get CF_Qty from the most recent RELEASED SCBR detail for BF_Qty carry-forward -->
+    <select id="findLastCfQty" resultType="java.math.BigDecimal">
+        SELECT d.cf_qty
+        FROM supplier_billing_request_detail d
+        JOIN supplier_billing_request h ON h.id = d.billing_id
+        WHERE h.status        = 'RELEASED'
+          AND h.store         = #{store,jdbcType=VARCHAR}
+          AND h.supplier_code = #{supplierCode,jdbcType=VARCHAR}
+          AND d.item_code     = #{itemCode,jdbcType=VARCHAR}
+        ORDER BY h.released_at DESC
+        LIMIT 1
+    </select>
+
+</mapper>

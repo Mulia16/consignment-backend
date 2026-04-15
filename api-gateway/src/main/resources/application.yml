@@ -23,6 +23,10 @@ spring:
             - Path=/consignment/**
           filters:
             - StripPrefix=1
+        - id: consignment-service-api
+          uri: lb://consignment-service
+          predicates:
+            - Path=/api/**
         - id: auth-service
           uri: lb://auth-service
           predicates:

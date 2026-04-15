@@ -73,4 +73,43 @@
           AND status IN ('HELD', 'RELEASED')
     </select>
 
+    <!-- Aggregate unsettled unpost rows by store+sku for a given supplier and date range -->
+    <select id="aggregateUnsettledBySupplier" resultType="com.consignment.service.persistence.mapper.ConsignmentUnpostMapper$SupplierUnpostAggRow">
+        SELECT cu.store,
+               cu.sku,
+               SUM(cu.sales_qty)        AS totalSales,
+               SUM(cu.sales_return_qty) AS totalReturn
+        FROM consignment_unpost cu
+        JOIN consignment_external_supplier ces
+            ON ces.item_code      = cu.sku
+           AND ces.supplier_code  = #{supplierCode}
+           AND ces.consignee_store = cu.store
+        WHERE cu.is_settled = false
+          AND cu.sales_date BETWEEN #{fromDate} AND #{toDate}
+          <if test="store != null">AND cu.store = #{store,jdbcType=VARCHAR}</if>
+        GROUP BY cu.store, cu.sku
+    </select>
+
+    <!-- Count existing HELD/RELEASED SCBR for same store+supplier+period to prevent duplicate -->
+    <select id="countUnsettledScbr" resultType="long">
+        SELECT COUNT(*)
+        FROM supplier_billing_request
+        WHERE store         = #{store,jdbcType=VARCHAR}
+          AND supplier_code = #{supplierCode,jdbcType=VARCHAR}
+          AND from_date     = #{fromDate,jdbcType=DATE}
+          AND to_date       = #{toDate,jdbcType=DATE}
+          AND status IN ('HELD', 'RELEASED')
+    </select>
+
+    <!-- Mark all matching unpost rows as settled after SCBR release -->
+    <update id="markSettledByScbr">
+        UPDATE consignment_unpost
+        SET is_settled = true,
+            scbr_id    = #{scbrId},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE is_settled = false
+          AND store      = #{store}
+          AND sales_date BETWEEN #{fromDate} AND #{toDate}
+    </update>
+
 </mapper>

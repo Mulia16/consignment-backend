@@ -1,0 +1,1 @@
+ALTER TABLE consignment_unpost ADD COLUMN IF NOT EXISTS scbr_id VARCHAR(64);

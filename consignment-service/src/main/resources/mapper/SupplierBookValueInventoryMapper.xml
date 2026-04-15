@@ -16,4 +16,14 @@
             updated_at = CURRENT_TIMESTAMP,
             period_date = CURRENT_DATE
     </insert>
+
+    <select id="findClosingQty" resultType="java.math.BigDecimal">
+        SELECT COALESCE(closing_qty, 0)
+        FROM supplier_book_value_inventory
+        WHERE store             = #{store,jdbcType=VARCHAR}
+          AND sku               = #{sku,jdbcType=VARCHAR}
+          AND supplier_code     = #{supplierCode,jdbcType=VARCHAR}
+          AND supplier_contract = #{supplierContract,jdbcType=VARCHAR}
+    </select>
+
 </mapper>
