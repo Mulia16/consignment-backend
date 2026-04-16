@@ -2,10 +2,13 @@ package com.consignment.service.api;
 
 import com.consignment.service.model.ApiResponse;
 import com.consignment.service.model.billing.*;
+import com.consignment.service.pdf.CustomerBillingSlipService;
 import com.consignment.service.service.CustomerBillingService;
 import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,9 +20,11 @@ import java.util.Map;
 public class CustomerBillingController {
 
     private final CustomerBillingService service;
+    private final CustomerBillingSlipService slipService;
 
-    public CustomerBillingController(CustomerBillingService service) {
+    public CustomerBillingController(CustomerBillingService service, CustomerBillingSlipService slipService) {
         this.service = service;
+        this.slipService = slipService;
     }
 
     // ── ACMM Inbound: receive unpost sales (POS / B2B / Online) ──────────────
@@ -160,5 +165,16 @@ public class CustomerBillingController {
     public ResponseEntity<ApiResponse<Void>> deleteFailed(@PathVariable String id) {
         service.deleteFailed(id);
         return ResponseEntity.ok(ApiResponse.ok("Failed billing request deleted", null));
+    }
+
+    @GetMapping("/api/customer-billing/{id}/slip")
+    public ResponseEntity<byte[]> printSlip(@PathVariable String id) {
+        byte[] pdf = slipService.generate(id);
+        String filename = "CBR-" + id + ".pdf";
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .header("X-Filename", filename)
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdf);
     }
 }

@@ -2,10 +2,13 @@ package com.consignment.service.api;
 
 import com.consignment.service.model.ApiResponse;
 import com.consignment.service.model.billing.*;
+import com.consignment.service.pdf.SupplierBillingSlipService;
 import com.consignment.service.service.SupplierBillingService;
 import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,9 +19,11 @@ import java.util.List;
 public class SupplierBillingController {
 
     private final SupplierBillingService service;
+    private final SupplierBillingSlipService slipService;
 
-    public SupplierBillingController(SupplierBillingService service) {
+    public SupplierBillingController(SupplierBillingService service, SupplierBillingSlipService slipService) {
         this.service = service;
+        this.slipService = slipService;
     }
 
     /**
@@ -94,5 +99,16 @@ public class SupplierBillingController {
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable String id) {
         service.delete(id);
         return ResponseEntity.ok(ApiResponse.ok("Supplier billing request deleted", null));
+    }
+
+    @GetMapping("/api/supplier-billing/{id}/slip")
+    public ResponseEntity<byte[]> printSlip(@PathVariable String id) {
+        byte[] pdf = slipService.generate(id);
+        String filename = "SCBR-" + id + ".pdf";
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .header("X-Filename", filename)
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdf);
     }
 }

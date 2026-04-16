@@ -1,12 +1,19 @@
 package com.consignment.service.excel;
 
+import com.consignment.service.model.billing.CustomerBillingSearchCriteria;
+import com.consignment.service.model.billing.SupplierBillingSearchCriteria;
 import com.consignment.service.model.report.CustomerInventoryRow;
 import com.consignment.service.model.report.ReportRow;
 import com.consignment.service.model.report.StockSummaryRow;
+import com.consignment.service.persistence.mapper.CustomerBillingMapper;
+import com.consignment.service.persistence.mapper.SupplierBillingMapper;
+import com.consignment.service.persistence.model.CustomerBillingRequestDetailEntity;
+import com.consignment.service.persistence.model.CustomerBillingRequestEntity;
+import com.consignment.service.persistence.model.SupplierBillingRequestDetailEntity;
+import com.consignment.service.persistence.model.SupplierBillingRequestEntity;
 import com.consignment.service.service.ReportService;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
@@ -17,9 +24,15 @@ import java.util.List;
 public class ReportExcelService {
 
     private final ReportService reportService;
+    private final SupplierBillingMapper supplierBillingMapper;
+    private final CustomerBillingMapper customerBillingMapper;
 
-    public ReportExcelService(ReportService reportService) {
+    public ReportExcelService(ReportService reportService,
+                               SupplierBillingMapper supplierBillingMapper,
+                               CustomerBillingMapper customerBillingMapper) {
         this.reportService = reportService;
+        this.supplierBillingMapper = supplierBillingMapper;
+        this.customerBillingMapper = customerBillingMapper;
     }
 
     // ── Transaction reports (CSRQ, CSRV, CSO, CSDO, CSR, CSA) ──────────────
@@ -310,6 +323,136 @@ public class ReportExcelService {
             return out.toByteArray();
         } catch (Exception e) {
             throw new RuntimeException("Failed to export reservations", e);
+        }
+    }
+
+    // ── Supplier Billing Export ───────────────────────────────────────────────
+
+    public byte[] exportSupplierBilling(String company, String store, String supplierCode,
+                                        String supplierContract, String status,
+                                        LocalDate fromDate, LocalDate toDate) {
+        var criteria = new SupplierBillingSearchCriteria(
+                null, company, store, supplierCode, supplierContract,
+                null, status, null, fromDate, toDate, 1, Integer.MAX_VALUE);
+        List<SupplierBillingRequestEntity> headers = supplierBillingMapper.search(criteria);
+
+        List<String> cols = List.of("Doc No", "Company", "Store", "Supplier Code", "Contract",
+                "Period Type", "From Date", "To Date", "Status",
+                "Item Code", "UOM", "Sales Qty", "Return Qty", "BF Qty",
+                "Billing Qty", "CF Qty", "Unit Cost", "Amount");
+
+        try (XSSFWorkbook wb = ExcelHelper.newWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            Sheet sheet = wb.createSheet("Supplier Billing");
+            CellStyle titleStyle  = ExcelHelper.titleStyle(wb);
+            CellStyle headerStyle = ExcelHelper.headerStyle(wb);
+            CellStyle altStyle    = ExcelHelper.altRowStyle(wb);
+            CellStyle totalStyle  = ExcelHelper.totalStyle(wb);
+
+            ExcelHelper.addTitleRow(sheet, 0, "Supplier Consignment Billing Report", cols.size(), titleStyle);
+            ExcelHelper.addMetaRow(sheet, 1, "Period: " + fmt(fromDate) + " - " + fmt(toDate)
+                    + "  |  Generated: " + ExcelHelper.today());
+            sheet.createRow(2);
+            ExcelHelper.addHeaderRow(sheet, 3, cols, headerStyle);
+            sheet.createFreezePane(0, 4);
+
+            int rowNum = 4;
+            double grandTotal = 0;
+            for (SupplierBillingRequestEntity h : headers) {
+                List<SupplierBillingRequestDetailEntity> details =
+                        supplierBillingMapper.findDetailsByBillingId(h.getId());
+                for (SupplierBillingRequestDetailEntity d : details) {
+                    double amount = d.getTotalCost() != null ? d.getTotalCost().doubleValue() : 0;
+                    grandTotal += amount;
+                    ExcelHelper.addDataRow(sheet, rowNum, List.of(
+                            nvl(h.getDocNo()), nvl(h.getCompany()), nvl(h.getStore()),
+                            nvl(h.getSupplierCode()), nvl(h.getSupplierContract()),
+                            nvl(h.getPeriodType()),
+                            h.getFromDate() != null ? h.getFromDate() : "-",
+                            h.getToDate()   != null ? h.getToDate()   : "-",
+                            nvl(h.getStatus()),
+                            nvl(d.getItemCode()), nvl(d.getUom()),
+                            orZero(d.getSalesQty()), orZero(d.getSalesReturnQty()),
+                            orZero(d.getBfQty()), orZero(d.getBillingQty()),
+                            orZero(d.getCfQty()), orZero(d.getUnitCost()), amount
+                    ), altStyle, rowNum % 2 == 1);
+                    rowNum++;
+                }
+            }
+            // Total row
+            Row total = sheet.createRow(rowNum);
+            Cell tc = total.createCell(0); tc.setCellValue("GRAND TOTAL"); tc.setCellStyle(totalStyle);
+            for (int i = 1; i < cols.size() - 1; i++) { Cell c = total.createCell(i); c.setCellValue(""); c.setCellStyle(totalStyle); }
+            Cell ta = total.createCell(cols.size() - 1); ta.setCellValue(grandTotal); ta.setCellStyle(totalStyle);
+
+            ExcelHelper.autoSizeColumns(sheet, cols.size());
+            wb.write(out);
+            return out.toByteArray();
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to export supplier billing", e);
+        }
+    }
+
+    // ── Customer Billing Export ───────────────────────────────────────────────
+
+    public byte[] exportCustomerBilling(String company, String store, String customerCode,
+                                        String status, LocalDate fromDate, LocalDate toDate) {
+        var criteria = new CustomerBillingSearchCriteria(
+                null, company, store, customerCode, null,
+                null, status, null, fromDate, toDate, 1, Integer.MAX_VALUE);
+        List<CustomerBillingRequestEntity> headers = customerBillingMapper.search(criteria);
+
+        List<String> cols = List.of("Doc No", "Company", "Store", "Customer Code", "Branch",
+                "Period Type", "From Date", "To Date", "Status",
+                "Item Code", "UOM", "Sales Qty", "Return Qty", "Billing Qty",
+                "Unit Price", "Amount");
+
+        try (XSSFWorkbook wb = ExcelHelper.newWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            Sheet sheet = wb.createSheet("Customer Billing");
+            CellStyle titleStyle  = ExcelHelper.titleStyle(wb);
+            CellStyle headerStyle = ExcelHelper.headerStyle(wb);
+            CellStyle altStyle    = ExcelHelper.altRowStyle(wb);
+            CellStyle totalStyle  = ExcelHelper.totalStyle(wb);
+
+            ExcelHelper.addTitleRow(sheet, 0, "Customer Consignment Billing Report", cols.size(), titleStyle);
+            ExcelHelper.addMetaRow(sheet, 1, "Period: " + fmt(fromDate) + " - " + fmt(toDate)
+                    + "  |  Generated: " + ExcelHelper.today());
+            sheet.createRow(2);
+            ExcelHelper.addHeaderRow(sheet, 3, cols, headerStyle);
+            sheet.createFreezePane(0, 4);
+
+            int rowNum = 4;
+            double grandTotal = 0;
+            for (CustomerBillingRequestEntity h : headers) {
+                List<CustomerBillingRequestDetailEntity> details =
+                        customerBillingMapper.findDetailsByBillingId(h.getId());
+                for (CustomerBillingRequestDetailEntity d : details) {
+                    double amount = d.getLineAmount() != null ? d.getLineAmount().doubleValue() : 0;
+                    grandTotal += amount;
+                    ExcelHelper.addDataRow(sheet, rowNum, List.of(
+                            nvl(h.getDocNo()), nvl(h.getCompany()), nvl(h.getStore()),
+                            nvl(h.getCustomerCode()), nvl(h.getCustomerBranch()),
+                            nvl(h.getPeriodType()),
+                            h.getFromDate() != null ? h.getFromDate() : "-",
+                            h.getToDate()   != null ? h.getToDate()   : "-",
+                            nvl(h.getStatus()),
+                            nvl(d.getItemCode()), nvl(d.getUom()),
+                            orZero(d.getSalesQty()), orZero(d.getReturnQty()),
+                            orZero(d.getBillingQty()), orZero(d.getUnitPrice()), amount
+                    ), altStyle, rowNum % 2 == 1);
+                    rowNum++;
+                }
+            }
+            // Total row
+            Row total = sheet.createRow(rowNum);
+            Cell tc = total.createCell(0); tc.setCellValue("GRAND TOTAL"); tc.setCellStyle(totalStyle);
+            for (int i = 1; i < cols.size() - 1; i++) { Cell c = total.createCell(i); c.setCellValue(""); c.setCellStyle(totalStyle); }
+            Cell ta = total.createCell(cols.size() - 1); ta.setCellValue(grandTotal); ta.setCellStyle(totalStyle);
+
+            ExcelHelper.autoSizeColumns(sheet, cols.size());
+            wb.write(out);
+            return out.toByteArray();
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to export customer billing", e);
         }
     }
 

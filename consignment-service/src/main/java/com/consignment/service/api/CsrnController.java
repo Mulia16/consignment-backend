@@ -2,9 +2,12 @@ package com.consignment.service.api;
 
 import com.consignment.service.model.ApiResponse;
 import com.consignment.service.model.csrn.*;
+import com.consignment.service.api.CsrnSlipService;
 import com.consignment.service.service.CsrnService;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,9 +18,11 @@ import java.util.List;
 public class CsrnController {
 
     private final CsrnService csrnService;
+    private final CsrnSlipService csrnSlipService;
 
-    public CsrnController(CsrnService csrnService) {
+    public CsrnController(CsrnService csrnService, CsrnSlipService csrnSlipService) {
         this.csrnService = csrnService;
+        this.csrnSlipService = csrnSlipService;
     }
 
     @GetMapping
@@ -73,5 +78,16 @@ public class CsrnController {
     @PutMapping("/{id}/complete")
     public ResponseEntity<ApiResponse<CsrnResponse>> complete(@PathVariable String id) {
         return ResponseEntity.ok(ApiResponse.success(csrnService.complete(id)));
+    }
+
+    @GetMapping("/{id}/slip")
+    public ResponseEntity<byte[]> printSlip(@PathVariable String id) {
+        byte[] pdf = csrnSlipService.generateSlip(id);
+        String filename = "CSRN-" + id + ".pdf";
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .header("X-Filename", filename)
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdf);
     }
 }

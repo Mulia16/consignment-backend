@@ -1,0 +1,283 @@
+{
+  "info": {
+    "name": "CMS — Excel Export",
+    "description": "Semua endpoint download Excel (.xlsx) untuk report Consignment Management System.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" }
+  ],
+  "item": [
+    {
+      "name": "Transaction Reports",
+      "item": [
+        {
+          "name": "CSRQ Report — Export Excel",
+          "request": {
+            "method": "GET",
+            "description": "Export transaksi CSRQ ke Excel. Ganti {type} dengan: CSRQ / CSRV / CSO / CSDO / CSR / CSA",
+            "url": {
+              "raw": "{{baseUrl}}/api/report/CSRQ/export?company=COMPANY01&store=STORE01&supplierCode=SUP001&fromDate=2024-01-01&toDate=2024-01-31&status=RELEASED",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "report", "CSRQ", "export"],
+              "query": [
+                { "key": "company",      "value": "COMPANY01" },
+                { "key": "store",        "value": "STORE01" },
+                { "key": "supplierCode", "value": "SUP001" },
+                { "key": "customerCode", "value": "",        "disabled": true },
+                { "key": "fromDate",     "value": "2024-01-01" },
+                { "key": "toDate",       "value": "2024-01-31" },
+                { "key": "status",       "value": "RELEASED" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "CSRV Report — Export Excel",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/report/CSRV/export?company=COMPANY01&store=STORE01&supplierCode=SUP001&fromDate=2024-01-01&toDate=2024-01-31",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "report", "CSRV", "export"],
+              "query": [
+                { "key": "company",      "value": "COMPANY01" },
+                { "key": "store",        "value": "STORE01" },
+                { "key": "supplierCode", "value": "SUP001" },
+                { "key": "fromDate",     "value": "2024-01-01" },
+                { "key": "toDate",       "value": "2024-01-31" },
+                { "key": "status",       "value": "",           "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "CSO Report — Export Excel",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/report/CSO/export?company=COMPANY01&store=STORE01&customerCode=CUST001&fromDate=2024-01-01&toDate=2024-01-31",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "report", "CSO", "export"],
+              "query": [
+                { "key": "company",      "value": "COMPANY01" },
+                { "key": "store",        "value": "STORE01" },
+                { "key": "customerCode", "value": "CUST001" },
+                { "key": "fromDate",     "value": "2024-01-01" },
+                { "key": "toDate",       "value": "2024-01-31" },
+                { "key": "status",       "value": "",           "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "CSDO Report — Export Excel",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/report/CSDO/export?company=COMPANY01&store=STORE01&fromDate=2024-01-01&toDate=2024-01-31",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "report", "CSDO", "export"],
+              "query": [
+                { "key": "company",  "value": "COMPANY01" },
+                { "key": "store",    "value": "STORE01" },
+                { "key": "fromDate", "value": "2024-01-01" },
+                { "key": "toDate",   "value": "2024-01-31" },
+                { "key": "status",   "value": "",           "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "CSR Report — Export Excel",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/report/CSR/export?company=COMPANY01&store=STORE01&fromDate=2024-01-01&toDate=2024-01-31",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "report", "CSR", "export"],
+              "query": [
+                { "key": "company",  "value": "COMPANY01" },
+                { "key": "store",    "value": "STORE01" },
+                { "key": "fromDate", "value": "2024-01-01" },
+                { "key": "toDate",   "value": "2024-01-31" },
+                { "key": "status",   "value": "",           "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "CSA Report — Export Excel",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/report/CSA/export?company=COMPANY01&store=STORE01&fromDate=2024-01-01&toDate=2024-01-31",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "report", "CSA", "export"],
+              "query": [
+                { "key": "company",  "value": "COMPANY01" },
+                { "key": "store",    "value": "STORE01" },
+                { "key": "fromDate", "value": "2024-01-01" },
+                { "key": "toDate",   "value": "2024-01-31" },
+                { "key": "status",   "value": "",           "disabled": true }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Inventory & Stock Reports",
+      "item": [
+        {
+          "name": "Supplier Book Value Inventory — Export Excel",
+          "request": {
+            "method": "GET",
+            "description": "Book value per batch per supplier.",
+            "url": {
+              "raw": "{{baseUrl}}/api/report/supplier-book-value/export?company=COMPANY01&store=STORE01&supplierCode=SUP001",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "report", "supplier-book-value", "export"],
+              "query": [
+                { "key": "company",          "value": "COMPANY01" },
+                { "key": "store",            "value": "STORE01" },
+                { "key": "supplierCode",     "value": "SUP001" },
+                { "key": "supplierContract", "value": "",        "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Customer Consignment Inventory — Export Excel",
+          "request": {
+            "method": "GET",
+            "description": "Balance per customer per store.",
+            "url": {
+              "raw": "{{baseUrl}}/api/report/customer-inventory/export?store=STORE01&customerCode=CUST001",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "report", "customer-inventory", "export"],
+              "query": [
+                { "key": "store",        "value": "STORE01" },
+                { "key": "customerCode", "value": "CUST001" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Reservations — Export Excel",
+          "request": {
+            "method": "GET",
+            "description": "List semua reservasi stok.",
+            "url": {
+              "raw": "{{baseUrl}}/api/report/reservations/export?store=STORE01",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "report", "reservations", "export"],
+              "query": [
+                { "key": "store",     "value": "STORE01" },
+                { "key": "itemCode",  "value": "",        "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Item Store Supplier (Consignment Setup) — Export Excel",
+          "request": {
+            "method": "GET",
+            "description": "Mapping item-supplier-store.",
+            "url": {
+              "raw": "{{baseUrl}}/api/report/consignment-setup/export?company=COMPANY01&store=STORE01",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "report", "consignment-setup", "export"],
+              "query": [
+                { "key": "company",      "value": "COMPANY01" },
+                { "key": "store",        "value": "STORE01" },
+                { "key": "supplierCode", "value": "",         "disabled": true }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Settlement Reports",
+      "item": [
+        {
+          "name": "Settlement Summary — Export Excel",
+          "request": {
+            "method": "GET",
+            "description": "Summary semua settlement (supplier & customer).",
+            "url": {
+              "raw": "{{baseUrl}}/api/report/settlement-summary/export?company=COMPANY01&store=STORE01&settlementType=SUPPLIER&fromDate=2024-01-01&toDate=2024-01-31",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "report", "settlement-summary", "export"],
+              "query": [
+                { "key": "company",        "value": "COMPANY01" },
+                { "key": "store",          "value": "STORE01" },
+                { "key": "settlementType", "value": "SUPPLIER" },
+                { "key": "fromDate",       "value": "2024-01-01" },
+                { "key": "toDate",         "value": "2024-01-31" },
+                { "key": "status",         "value": "",           "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Settlement Detail — Export Excel",
+          "request": {
+            "method": "GET",
+            "description": "Detail per settlement ID.",
+            "url": {
+              "raw": "{{baseUrl}}/api/report/settlement-detail/:settlementId/export",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "report", "settlement-detail", ":settlementId", "export"],
+              "variable": [
+                { "key": "settlementId", "value": "" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Supplier Billing — Export Excel",
+          "request": {
+            "method": "GET",
+            "description": "Export Supplier Consignment Billing Request (SCBR) ke Excel. Berisi header + detail per item.",
+            "url": {
+              "raw": "{{baseUrl}}/api/report/supplier-billing/export?company=COMPANY01&store=STORE01&supplierCode=SUP001&fromDate=2024-01-01&toDate=2024-01-31",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "report", "supplier-billing", "export"],
+              "query": [
+                { "key": "company",          "value": "COMPANY01" },
+                { "key": "store",            "value": "STORE01" },
+                { "key": "supplierCode",     "value": "SUP001" },
+                { "key": "supplierContract", "value": "",         "disabled": true },
+                { "key": "status",           "value": "",         "disabled": true },
+                { "key": "fromDate",         "value": "2024-01-01" },
+                { "key": "toDate",           "value": "2024-01-31" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Customer Billing — Export Excel",
+          "request": {
+            "method": "GET",
+            "description": "Export Customer Consignment Billing Request (CBR) ke Excel. Berisi header + detail per item.",
+            "url": {
+              "raw": "{{baseUrl}}/api/report/customer-billing/export?company=COMPANY01&store=STORE01&customerCode=CUST001&fromDate=2024-01-01&toDate=2024-01-31",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "report", "customer-billing", "export"],
+              "query": [
+                { "key": "company",      "value": "COMPANY01" },
+                { "key": "store",        "value": "STORE01" },
+                { "key": "customerCode", "value": "CUST001" },
+                { "key": "status",       "value": "",         "disabled": true },
+                { "key": "fromDate",     "value": "2024-01-01" },
+                { "key": "toDate",       "value": "2024-01-31" }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

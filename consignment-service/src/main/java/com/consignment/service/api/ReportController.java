@@ -202,6 +202,35 @@ public class ReportController {
         return excelResponse(reportExcelService.exportReservations(store, itemCode), "Reservations.xlsx");
     }
 
+    @GetMapping("/supplier-billing/export")
+    public ResponseEntity<byte[]> exportSupplierBilling(
+            @RequestParam(required = false) String company,
+            @RequestParam(required = false) String store,
+            @RequestParam(required = false) String supplierCode,
+            @RequestParam(required = false) String supplierContract,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate fromDate,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate toDate) {
+        String filename = "SupplierBilling_" + (fromDate != null ? fromDate : "all")
+                + "_" + (toDate != null ? toDate : "all") + ".xlsx";
+        return excelResponse(reportExcelService.exportSupplierBilling(
+                company, store, supplierCode, supplierContract, status, fromDate, toDate), filename);
+    }
+
+    @GetMapping("/customer-billing/export")
+    public ResponseEntity<byte[]> exportCustomerBilling(
+            @RequestParam(required = false) String company,
+            @RequestParam(required = false) String store,
+            @RequestParam(required = false) String customerCode,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate fromDate,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate toDate) {
+        String filename = "CustomerBilling_" + (fromDate != null ? fromDate : "all")
+                + "_" + (toDate != null ? toDate : "all") + ".xlsx";
+        return excelResponse(reportExcelService.exportCustomerBilling(
+                company, store, customerCode, status, fromDate, toDate), filename);
+    }
+
     private ResponseEntity<byte[]> excelResponse(byte[] data, String filename) {
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")

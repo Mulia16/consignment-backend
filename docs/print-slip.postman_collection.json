@@ -1,0 +1,116 @@
+{
+  "info": {
+    "name": "CMS — Print Slip (PDF)",
+    "description": "Semua endpoint print/download PDF slip untuk dokumen transaksi Consignment Management System.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "csrqId",  "value": "" },
+    { "key": "csrvId",  "value": "" },
+    { "key": "csoId",   "value": "" },
+    { "key": "csdoId",  "value": "" },
+    { "key": "csrnId",  "value": "" },
+    { "key": "csaId",   "value": "" },
+    { "key": "cbrId",   "value": "" },
+    { "key": "scbrId",  "value": "" }
+  ],
+  "item": [
+    {
+      "name": "CSRQ — Print Stock Request Slip",
+      "request": {
+        "method": "GET",
+        "description": "Download PDF slip untuk CSRQ (Stock Request). Isi: header supplier, list item & qty request, tanda tangan.",
+        "url": {
+          "raw": "{{baseUrl}}/api/csrq/{{csrqId}}/slip",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "csrq", "{{csrqId}}", "slip"]
+        }
+      }
+    },
+    {
+      "name": "CSRV — Print GR Slip",
+      "request": {
+        "method": "GET",
+        "description": "Download PDF slip untuk CSRV (Stock Receiving). Isi: header receiving, item + qty received.",
+        "url": {
+          "raw": "{{baseUrl}}/api/csrv/{{csrvId}}/slip",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "csrv", "{{csrvId}}", "slip"]
+        }
+      }
+    },
+    {
+      "name": "CSO — Print Delivery Order",
+      "request": {
+        "method": "GET",
+        "description": "Download PDF slip untuk CSO (Stock Out / D.O.). Isi: customer info, item list, tanda tangan driver & penerima.",
+        "url": {
+          "raw": "{{baseUrl}}/api/cso/{{csoId}}/slip",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "cso", "{{csoId}}", "slip"]
+        }
+      }
+    },
+    {
+      "name": "CSDO — Print Formal Delivery Order",
+      "request": {
+        "method": "GET",
+        "description": "Download PDF slip untuk CSDO (Formal D.O.). Isi: kop surat, item, tanda tangan.",
+        "url": {
+          "raw": "{{baseUrl}}/api/csdo/{{csdoId}}/slip",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "csdo", "{{csdoId}}", "slip"]
+        }
+      }
+    },
+    {
+      "name": "CSRN — Print Return Note",
+      "request": {
+        "method": "GET",
+        "description": "Download PDF slip untuk CSRN (Stock Return). Isi: item returned, qty, tanda tangan.",
+        "url": {
+          "raw": "{{baseUrl}}/api/csrn/{{csrnId}}/slip",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "csrn", "{{csrnId}}", "slip"]
+        }
+      }
+    },
+    {
+      "name": "CSA — Print Adjustment Note",
+      "request": {
+        "method": "GET",
+        "description": "Download PDF slip untuk CSA (Stock Adjustment). Isi: tipe adj, item, qty, reason.",
+        "url": {
+          "raw": "{{baseUrl}}/api/csa/{{csaId}}/slip",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "csa", "{{csaId}}", "slip"]
+        }
+      }
+    },
+    {
+      "name": "Customer Billing — Print Invoice/TN",
+      "request": {
+        "method": "GET",
+        "description": "Download PDF invoice untuk Customer Billing Request (CBR). Isi: header billing, item, qty, harga, grand total.",
+        "url": {
+          "raw": "{{baseUrl}}/api/customer-billing/{{cbrId}}/slip",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "customer-billing", "{{cbrId}}", "slip"]
+        }
+      }
+    },
+    {
+      "name": "Supplier Billing — Print PO/GR Summary",
+      "request": {
+        "method": "GET",
+        "description": "Download PDF PO/GR summary untuk Supplier Billing Request (SCBR). Isi: header PO, item, net qty, unit cost, grand total. Layout landscape A4.",
+        "url": {
+          "raw": "{{baseUrl}}/api/supplier-billing/{{scbrId}}/slip",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "supplier-billing", "{{scbrId}}", "slip"]
+        }
+      }
+    }
+  ]
+}
