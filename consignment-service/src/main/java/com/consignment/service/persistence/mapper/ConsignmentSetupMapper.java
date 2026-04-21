@@ -65,4 +65,6 @@ public interface ConsignmentSetupMapper {
                                               @Param("store") String store,
                                               @Param("supplierCode") String supplierCode,
                                               @Param("supplierContract") String supplierContract);
+
+    List<ExternalSupplierEntity> findByConsigneeStore(@Param("store") String store);
 }

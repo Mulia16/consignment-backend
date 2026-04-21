@@ -36,6 +36,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         classes = SettlementControllerIntegrationTest.TestApplication.class,
         webEnvironment = SpringBootTest.WebEnvironment.MOCK,
         properties = {
+                "jwt.secret=test-secret-key-must-be-at-least-32-chars-long",
                 "app.security.enabled=false",
                 "app.api-log.enabled=false",
                 "spring.sql.init.mode=never",
@@ -110,11 +111,11 @@ class SettlementControllerIntegrationTest {
                                   "referenceNo": "WEEKLY-2026-03-01-2026-03-31-store01"
                                 }
                                 """))
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())
                 .andExpect(header().string(CorrelationIdFilter.CORRELATION_ID_HEADER, "corr-123"))
-                .andExpect(jsonPath("$.id").value("SET-1"))
-                .andExpect(jsonPath("$.docNo").value("SETTL-00001"))
-                .andExpect(jsonPath("$.createdBy").value("settlement-batch-job"));
+                .andExpect(jsonPath("$.data.id").value("SET-1"))
+                .andExpect(jsonPath("$.data.docNo").value("SETTL-00001"))
+                .andExpect(jsonPath("$.data.createdBy").value("settlement-batch-job"));
 
         verify(settlementService).generateBatch(argThat(request ->
                 "COMP01".equals(request.company())
@@ -147,9 +148,9 @@ class SettlementControllerIntegrationTest {
                                   "referenceNo": "WEEKLY-2026-03-01-2026-03-31-store01"
                                 }
                                 """))
-                .andExpect(status().isBadRequest())
+                .andExpect(status().isUnprocessableEntity())
                 .andExpect(header().exists(CorrelationIdFilter.CORRELATION_ID_HEADER))
-                .andExpect(jsonPath("$.code").value("BUSINESS_RULE_VIOLATION"))
+                .andExpect(jsonPath("$.status").value(422))
                 .andExpect(jsonPath("$.message").value("No eligible source documents found for the requested period"));
     }
 
@@ -159,6 +160,8 @@ class SettlementControllerIntegrationTest {
             SettlementController.class,
             GlobalExceptionHandler.class,
             SecurityConfig.class,
+            com.consignment.service.config.JwtAuthFilter.class,
+            com.consignment.service.config.JwtUtil.class,
             CorrelationIdFilter.class,
             ApiLoggingFilter.class,
             ApiLoggingService.class

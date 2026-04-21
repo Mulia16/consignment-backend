@@ -75,10 +75,10 @@ class SettlementControllerTest {
         mockMvc.perform(post("/api/settlement/generate")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value("SET-1"))
-                .andExpect(jsonPath("$.docNo").value("SETTL-00001"))
-                .andExpect(jsonPath("$.referenceNo").value("WEEKLY-2026-03-01-2026-03-31-store01"));
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.id").value("SET-1"))
+                .andExpect(jsonPath("$.data.docNo").value("SETTL-00001"))
+                .andExpect(jsonPath("$.data.referenceNo").value("WEEKLY-2026-03-01-2026-03-31-store01"));
 
         verify(settlementService).generateBatch(any(SettlementBatchGenerateRequest.class));
     }
@@ -107,8 +107,8 @@ class SettlementControllerTest {
         mockMvc.perform(post("/api/settlement/generate")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("BUSINESS_RULE_VIOLATION"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.status").value(422))
                 .andExpect(jsonPath("$.message").value("No eligible source documents found for the requested period"));
     }
 }

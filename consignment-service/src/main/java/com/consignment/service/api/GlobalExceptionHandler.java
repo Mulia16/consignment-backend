@@ -2,6 +2,7 @@ package com.consignment.service.api;
 
 import com.consignment.service.exception.BusinessRuleViolationException;
 import com.consignment.service.exception.InvalidStateTransitionException;
+import com.consignment.service.exception.MissingStoreClaimException;
 import com.consignment.service.exception.RequestValidationException;
 import com.consignment.service.exception.ResourceNotFoundException;
 import com.consignment.service.model.ApiResponse;
@@ -28,6 +29,14 @@ import java.util.stream.Collectors;
 public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    // 403 - JWT tidak memiliki claim store
+    @ExceptionHandler(MissingStoreClaimException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMissingStoreClaim(MissingStoreClaimException ex, HttpServletRequest request) {
+        log.warn("[403] MissingStoreClaim: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(ApiResponse.error(403, "Store claim missing in token"));
+    }
 
     // 404 - resource tidak ditemukan
     @ExceptionHandler(ResourceNotFoundException.class)

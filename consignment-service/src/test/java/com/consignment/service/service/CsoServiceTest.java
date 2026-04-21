@@ -1,6 +1,7 @@
 package com.consignment.service.service;
 
 import com.consignment.service.exception.BusinessRuleViolationException;
+import com.consignment.service.exception.RequestValidationException;
 import com.consignment.service.model.cso.CsoDetailRequest;
 import com.consignment.service.model.cso.CsoRequest;
 import com.consignment.service.persistence.mapper.CsoMapper;
@@ -83,7 +84,7 @@ class CsoServiceTest {
 
         when(csoMapper.countMatchingSetup("SKU01", "SUP01", "CTR01", "STORE01")).thenReturn(0L);
 
-        assertThrows(BusinessRuleViolationException.class, () -> csoService.create(request));
+        assertThrows(RequestValidationException.class, () -> csoService.create(request));
         verify(csoMapper, never()).insertHeader(any());
     }
 

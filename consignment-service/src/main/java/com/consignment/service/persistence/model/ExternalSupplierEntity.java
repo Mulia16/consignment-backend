@@ -6,6 +6,8 @@ public class ExternalSupplierEntity {
 
     private String id;
     private String itemCode;
+    private String itemName;
+    private String variant;
     private String supplierCode;
     private String supplierType;
     private String supplierContract;
@@ -29,6 +31,22 @@ public class ExternalSupplierEntity {
 
     public void setItemCode(String itemCode) {
         this.itemCode = itemCode;
+    }
+
+    public String getItemName() {
+        return itemName;
+    }
+
+    public void setItemName(String itemName) {
+        this.itemName = itemName;
+    }
+
+    public String getVariant() {
+        return variant;
+    }
+
+    public void setVariant(String variant) {
+        this.variant = variant;
     }
 
     public String getSupplierCode() {

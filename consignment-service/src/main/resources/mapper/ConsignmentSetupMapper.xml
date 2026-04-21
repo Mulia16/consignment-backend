@@ -7,6 +7,8 @@
     <resultMap id="ExternalSupplierResultMap" type="com.consignment.service.persistence.model.ExternalSupplierEntity">
         <id property="id" column="id"/>
         <result property="itemCode" column="item_code"/>
+        <result property="itemName" column="item_name"/>
+        <result property="variant" column="variant"/>
         <result property="supplierCode" column="supplier_code"/>
         <result property="supplierType" column="supplier_type"/>
         <result property="supplierContract" column="supplier_contract"/>
@@ -227,5 +229,16 @@
             </if>
         </where>
         ORDER BY item_code ASC
+    </select>
+
+    <select id="findByConsigneeStore" resultMap="ExternalSupplierResultMap">
+        SELECT e.id, e.item_code, s.item_name, s.variant,
+               e.supplier_code, e.supplier_type, e.supplier_contract,
+               e.consignee_company, e.consignee_store,
+               e.current_inventory_qty, e.created_at, e.updated_at
+        FROM consignment_external_supplier e
+        LEFT JOIN consignment_item_setup s ON s.item_code = e.item_code AND s.deleted_flag = FALSE
+        WHERE e.consignee_store = #{store}
+        ORDER BY e.item_code ASC
     </select>
 </mapper>

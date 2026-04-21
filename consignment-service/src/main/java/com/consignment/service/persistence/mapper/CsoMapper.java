@@ -8,6 +8,7 @@ import org.apache.ibatis.annotations.Param;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 
 @Mapper
 public interface CsoMapper {
@@ -25,4 +26,10 @@ public interface CsoMapper {
     Long findMaxDocNoNumber();
     long countMatchingSetup(@Param("itemCode") String itemCode, @Param("supplierCode") String supplierCode,
                             @Param("supplierContract") String supplierContract, @Param("store") String store);
+
+    /**
+     * Returns sales qty per item_code for a given store, combining CSO and CSDO transactions.
+     * Each map entry has keys: "item_code" and "sales_qty".
+     */
+    List<Map<String, Object>> findSalesQtyByStore(@Param("store") String store);
 }

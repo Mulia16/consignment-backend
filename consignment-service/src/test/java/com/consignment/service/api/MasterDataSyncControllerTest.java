@@ -56,8 +56,8 @@ class MasterDataSyncControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.entity").value("item-prices"))
-                .andExpect(jsonPath("$.upserted").value(1));
+                .andExpect(jsonPath("$.data.entity").value("item-prices"))
+                .andExpect(jsonPath("$.data.upserted").value(1));
 
               verify(masterDataSyncService).sync(eq("item-prices"), anyList());
     }
@@ -69,7 +69,7 @@ class MasterDataSyncControllerTest {
         mockMvc.perform(post("/api/acmm/master-sync/item-prices")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.status").value(422));
     }
 }

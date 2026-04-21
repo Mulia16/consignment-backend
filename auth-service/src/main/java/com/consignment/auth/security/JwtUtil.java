@@ -24,15 +24,18 @@ public class JwtUtil {
         return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }
 
-    public String generateToken(String username, Set<String> roles) {
-        return Jwts.builder()
+    public String generateToken(String username, Set<String> roles, String store) {
+        JwtBuilder builder = Jwts.builder()
                 .id(UUID.randomUUID().toString())   // jti — unique per token
                 .subject(username)
                 .claim("roles", roles)
                 .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + expirationMs))
-                .signWith(key())
-                .compact();
+                .expiration(new Date(System.currentTimeMillis() + expirationMs));
+
+        if (store != null) {
+            builder.claim("store", store);
+        }
+        return builder.signWith(key()).compact();
     }
 
     public String extractUsername(String token) {
@@ -60,7 +63,7 @@ public class JwtUtil {
         }
     }
 
-    private Claims parseClaims(String token) {
+    public Claims parseClaims(String token) {
         return Jwts.parser().verifyWith(key()).build()
                 .parseSignedClaims(token).getPayload();
     }

@@ -1,9 +1,12 @@
 package com.consignment.auth.api;
 
 import com.consignment.auth.model.User;
+import com.consignment.auth.model.UserProfile;
 import com.consignment.auth.repository.TokenBlacklistRepository;
+import com.consignment.auth.repository.UserProfileRepository;
 import com.consignment.auth.repository.UserRepository;
 import com.consignment.auth.security.JwtUtil;
+import com.consignment.auth.service.MenuService;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -19,7 +22,9 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 @RestController
@@ -28,18 +33,23 @@ public class AuthController {
 
     private final AuthenticationManager authManager;
     private final UserRepository userRepository;
+    private final UserProfileRepository userProfileRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final TokenBlacklistRepository blacklist;
+    private final MenuService menuService;
 
     public AuthController(AuthenticationManager authManager, UserRepository userRepository,
+                          UserProfileRepository userProfileRepository,
                           PasswordEncoder passwordEncoder, JwtUtil jwtUtil,
-                          TokenBlacklistRepository blacklist) {
+                          TokenBlacklistRepository blacklist, MenuService menuService) {
         this.authManager = authManager;
         this.userRepository = userRepository;
+        this.userProfileRepository = userProfileRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
         this.blacklist = blacklist;
+        this.menuService = menuService;
     }
 
     @PostMapping("/login")
@@ -51,7 +61,20 @@ public class AuthController {
             Set<String> roles = userDetails.getAuthorities().stream()
                     .map(a -> a.getAuthority())
                     .collect(java.util.stream.Collectors.toSet());
-            String token = jwtUtil.generateToken(userDetails.getUsername(), roles);
+
+            String store = null;
+            if (roles.contains("ROLE_CONSIGNEE")) {
+                User user = userRepository.findByUsername(userDetails.getUsername())
+                        .orElseThrow(() -> new RuntimeException("User not found"));
+                Optional<UserProfile> profileOpt = userProfileRepository.findByUserId(user.getId());
+                if (profileOpt.isEmpty()) {
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                            .body(ApiResponse.error(403, "Consignee store mapping not found"));
+                }
+                store = profileOpt.get().getConsigneeStore();
+            }
+
+            String token = jwtUtil.generateToken(userDetails.getUsername(), roles, store);
             Map<String, Object> data = Map.of(
                     "token", token,
                     "token_type", "Bearer",
@@ -135,4 +158,85 @@ public class AuthController {
             @NotBlank(message = "email is required") @Email(message = "email format is invalid") @Size(max = 150, message = "email max length is 150") String email,
             @NotBlank(message = "password is required") @Size(min = 8, max = 100, message = "password length must be between 8 and 100") String password
         ) {}
+
+    @GetMapping("/me")
+    public ResponseEntity<ApiResponse<?>> getMe(
+            @RequestHeader(value = "Authorization", required = false) String bearerToken) {
+        if (bearerToken == null || !bearerToken.startsWith("Bearer ")) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(401, "Token is invalid or expired"));
+        }
+        String token = bearerToken.substring(7).trim();
+        
+        // Validate token
+        if (!jwtUtil.validateToken(token)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(401, "Token is invalid or expired"));
+        }
+        
+        // Check blacklist
+        String jti = jwtUtil.extractJti(token);
+        if (blacklist.isBlacklisted(jti)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(401, "Token has been revoked"));
+        }
+        
+        // Extract username and get user from database
+        String username = jwtUtil.extractUsername(token);
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        // Get roles
+        Set<String> roles = user.getRoles();
+        
+        // Get store if user has ROLE_CONSIGNEE
+        String store = null;
+        if (roles.contains("ROLE_CONSIGNEE")) {
+            Optional<UserProfile> profileOpt = userProfileRepository.findByUserId(user.getId());
+            if (profileOpt.isPresent()) {
+                store = profileOpt.get().getConsigneeStore();
+            }
+        }
+        
+        // Create response
+        MeResponse meResponse = new MeResponse(username, user.getEmail(), roles, store);
+        return ResponseEntity.ok(ApiResponse.ok("User info retrieved successfully", meResponse));
+    }
+
+    record MeResponse(
+        String username,
+        String email,
+        Set<String> roles,
+        String store
+    ) {}
+
+    @GetMapping("/me/menus")
+    public ResponseEntity<ApiResponse<?>> getMenus(
+            @RequestHeader(value = "Authorization", required = false) String bearerToken) {
+        if (bearerToken == null || !bearerToken.startsWith("Bearer ")) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(401, "Token is invalid or expired"));
+        }
+        String token = bearerToken.substring(7).trim();
+
+        if (!jwtUtil.validateToken(token)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(401, "Token is invalid or expired"));
+        }
+
+        String jti = jwtUtil.extractJti(token);
+        if (blacklist.isBlacklisted(jti)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(401, "Token has been revoked"));
+        }
+
+        @SuppressWarnings("unchecked")
+        List<?> rawRoles = jwtUtil.parseClaims(token).get("roles", List.class);
+        Set<String> roles = rawRoles == null ? Set.of()
+                : rawRoles.stream().map(Object::toString)
+                          .collect(java.util.stream.Collectors.toSet());
+
+        List<String> menus = menuService.getMenusForRoles(roles);
+        return ResponseEntity.ok(ApiResponse.ok("Menus retrieved successfully", menus));
+    }
 }

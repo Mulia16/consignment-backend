@@ -167,4 +167,20 @@
           AND external_supplier.supplier_contract = #{supplierContract}
           AND external_supplier.consignee_store = #{store}
     </select>
+
+    <select id="findSalesQtyByStore" resultType="map">
+        SELECT item_code, COALESCE(SUM(qty), 0) AS sales_qty
+        FROM (
+            SELECT d.item_code, d.qty
+            FROM cso_detail d
+            JOIN cso_header h ON h.id = d.cso_id
+            WHERE h.store = #{store}
+            UNION ALL
+            SELECT d.item_code, d.qty
+            FROM csdo_detail d
+            JOIN csdo_header h ON h.id = d.csdo_id
+            WHERE h.store = #{store}
+        ) combined
+        GROUP BY item_code
+    </select>
 </mapper>
