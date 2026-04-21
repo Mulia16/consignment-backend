@@ -33,7 +33,16 @@ VALUES
     (gen_random_uuid()::text, 'ITEM008', 'SUPP002', 'EXTERNAL', 'CONTRACT-2024-002', 'COMP01', 'STORE01', 60),
     -- SUPP002 / CONTRACT-2024-002 → COMP02/STORE03
     (gen_random_uuid()::text, 'ITEM005', 'SUPP002', 'EXTERNAL', 'CONTRACT-2024-002', 'COMP02', 'STORE03', 20),
-    (gen_random_uuid()::text, 'ITEM006', 'SUPP002', 'EXTERNAL', 'CONTRACT-2024-002', 'COMP02', 'STORE03', 50)
+    (gen_random_uuid()::text, 'ITEM006', 'SUPP002', 'EXTERNAL', 'CONTRACT-2024-002', 'COMP02', 'STORE03', 50),
+    -- Mirror STORE01 data for seeded consignee user profile STORE_A
+    (gen_random_uuid()::text, 'ITEM001', 'SUPP001', 'EXTERNAL', 'CONTRACT-2024-001', 'COMP01', 'STORE_A', 50),
+    (gen_random_uuid()::text, 'ITEM002', 'SUPP001', 'EXTERNAL', 'CONTRACT-2024-001', 'COMP01', 'STORE_A', 30),
+    (gen_random_uuid()::text, 'ITEM003', 'SUPP001', 'EXTERNAL', 'CONTRACT-2024-001', 'COMP01', 'STORE_A', 40),
+    (gen_random_uuid()::text, 'ITEM004', 'SUPP001', 'EXTERNAL', 'CONTRACT-2024-001', 'COMP01', 'STORE_A', 25),
+    (gen_random_uuid()::text, 'ITEM005', 'SUPP002', 'EXTERNAL', 'CONTRACT-2024-002', 'COMP01', 'STORE_A', 30),
+    (gen_random_uuid()::text, 'ITEM006', 'SUPP002', 'EXTERNAL', 'CONTRACT-2024-002', 'COMP01', 'STORE_A', 100),
+    (gen_random_uuid()::text, 'ITEM007', 'SUPP002', 'EXTERNAL', 'CONTRACT-2024-002', 'COMP01', 'STORE_A', 80),
+    (gen_random_uuid()::text, 'ITEM008', 'SUPP002', 'EXTERNAL', 'CONTRACT-2024-002', 'COMP01', 'STORE_A', 60)
 ON CONFLICT DO NOTHING;
 
 -- Internal Supplier Setup (INT-SUPP01 = STORE01 supplies to STORE02)
