@@ -1,9 +1,9 @@
 -- Seed consignee_user with password 'password123'
--- BCrypt hash generated with cost 10
+-- BCrypt hash for 'password123' (cost 10, generated via Spring BCryptPasswordEncoder)
 INSERT INTO users (username, password, email, enabled)
 VALUES (
     'consignee_user',
-    '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy',
+    '$2a$10$elbvAlfoeBilKVKKQsF/J.dCr0nSnrThNFckuWsG1oHbMDjaOIq1K',
     'consignee@store-a.com',
     true
 )
