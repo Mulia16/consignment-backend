@@ -1,5 +1,6 @@
 package com.consignment.service.service;
 
+import com.consignment.service.constant.ConsignmentConstants;
 import com.consignment.service.exception.BusinessRuleViolationException;
 import com.consignment.service.exception.ResourceNotFoundException;
 import com.consignment.service.model.PageMeta;
@@ -18,7 +19,7 @@ import java.util.List;
 @Service
 public class CsrnCService {
 
-    private static final String STATUS_HELD = "HELD";
+    private static final String STATUS_HELD = ConsignmentConstants.STATUS_HELD;
     private static final String STATUS_UPDATED = "UPDATED";
 
     private final CsrnCMapper csrnCMapper;

@@ -1,5 +1,6 @@
 package com.consignment.service.service;
 
+import com.consignment.service.constant.ConsignmentConstants;
 import com.consignment.service.exception.BusinessRuleViolationException;
 import com.consignment.service.exception.RequestValidationException;
 import com.consignment.service.exception.ResourceNotFoundException;
@@ -15,6 +16,8 @@ import com.consignment.service.persistence.mapper.CsoMapper;
 import com.consignment.service.persistence.mapper.ReservationMapper;
 import com.consignment.service.persistence.model.CsoDetailEntity;
 import com.consignment.service.persistence.model.CsoHeaderEntity;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,8 +31,10 @@ import java.util.UUID;
 @Service
 public class CsoService {
 
-    private static final String STATUS_HELD = "HELD";
-    private static final String STATUS_RELEASED = "RELEASED";
+    private static final Logger log = LoggerFactory.getLogger(CsoService.class);
+
+    private static final String STATUS_HELD = ConsignmentConstants.STATUS_HELD;
+    private static final String STATUS_RELEASED = ConsignmentConstants.STATUS_RELEASED;
     private static final String STATUS_ERROR = "ERROR";
     private static final String DOC_TYPE_CSO = "CSO";
     private static final String RESERVATION_ALLOCATE = "Allocate";
@@ -48,6 +53,7 @@ public class CsoService {
 
     @Transactional
     public CsoResponse update(String id, CsoUpdateRequest request) {
+        log.info("Updating CSO id={} items={}", id, request.items() == null ? 0 : request.items().size());
         CsoHeaderEntity header = loadHeader(id);
         if (!STATUS_HELD.equalsIgnoreCase(header.getStatus())) {
             throw new BusinessRuleViolationException("Only CSO with status HELD can be updated");
@@ -81,6 +87,7 @@ public class CsoService {
 
     @Transactional
     public CsoResponse create(CsoRequest request) {
+        log.info("Creating CSO store={} customer={} supplier={}", request.store(), request.customerCode(), request.supplierCode());
         List<Map<String, String>> setupErrors = validateSetup(request);
         if (!setupErrors.isEmpty()) {
             throw new RequestValidationException(
@@ -94,6 +101,7 @@ public class CsoService {
 
     @Transactional
     public CsoResponse autoCreate(CsoRequest request) {
+        log.info("Auto-creating CSO store={} createdMethod={}", request.store(), request.createdMethod());
         if (!METHOD_API.equalsIgnoreCase(request.createdMethod())) {
             throw new BusinessRuleViolationException("Auto-create CSO requires createdMethod = API");
         }
@@ -126,6 +134,7 @@ public class CsoService {
 
     @Transactional
     public CsoResponse release(String id, String releasedBy) {
+        log.info("Releasing CSO id={} releasedBy={}", id, releasedBy);
         CsoHeaderEntity header = loadHeader(id);
         if (!STATUS_HELD.equalsIgnoreCase(header.getStatus())) {
             throw new BusinessRuleViolationException("Only CSO with status HELD can be released");
@@ -148,6 +157,7 @@ public class CsoService {
 
     @Transactional
     public void delete(String id) {
+        log.info("Deleting CSO id={}", id);
         CsoHeaderEntity header = loadHeader(id);
         if (!STATUS_HELD.equalsIgnoreCase(header.getStatus()) && !STATUS_ERROR.equalsIgnoreCase(header.getStatus())) {
             throw new BusinessRuleViolationException("Only CSO with status HELD or ERROR can be deleted");

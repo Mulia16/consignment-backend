@@ -10,6 +10,8 @@ import com.consignment.service.persistence.mapper.ItemSetupMapper;
 import com.consignment.service.persistence.model.ExternalSupplierEntity;
 import com.consignment.service.persistence.model.InternalSupplierEntity;
 import com.consignment.service.persistence.model.ItemSetupEntity;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,6 +20,8 @@ import java.util.UUID;
 
 @Service
 public class ConsignmentSetupService {
+
+    private static final Logger log = LoggerFactory.getLogger(ConsignmentSetupService.class);
 
     private static final String DEFAULT_HIERARCHY = "CONSIGNMENT";
     private static final String OUTRIGHT_HIERARCHY = "OUTRIGHT";
@@ -39,6 +43,7 @@ public class ConsignmentSetupService {
     public record PagedItems(List<ConsignmentSetupItemResponse> items, PageMeta meta) {}
 
     public PagedItems listItems(ItemSetupSearchCriteria criteria) {
+        log.debug("Listing setup items page={} perPage={} itemCode={}", criteria.page(), criteria.perPage(), criteria.itemCode());
         List<ItemSetupEntity> entities = consignmentSetupMapper.searchItems(criteria);
         long total = consignmentSetupMapper.countItems(criteria);
         List<ConsignmentSetupItemResponse> items = entities.stream()
@@ -52,6 +57,7 @@ public class ConsignmentSetupService {
     // ── Single item ────────────────────────────────────────────────────────────
 
     public ConsignmentSetupItemResponse getByItemCode(String itemCode) {
+        log.debug("Fetching setup by itemCode={}", itemCode);
         ItemSetupEntity itemSetup = itemSetupMapper.findByItemCode(itemCode);
         List<ExternalSupplierEntity> ext = consignmentSetupMapper.findExternalByItemCode(itemCode);
         List<InternalSupplierEntity> intl = consignmentSetupMapper.findInternalByItemCode(itemCode);
@@ -65,6 +71,7 @@ public class ConsignmentSetupService {
 
     @Transactional
     public ConsignmentSetupItemResponse createOrUpdateItem(ItemSetupRequest request) {
+        log.info("Upserting item setup itemCode={} hierarchy={}", request.itemCode(), request.hierarchy());
         ItemSetupEntity entity = new ItemSetupEntity();
         entity.setItemCode(request.itemCode());
         entity.setItemName(request.itemName());
@@ -86,6 +93,7 @@ public class ConsignmentSetupService {
 
     @Transactional
     public ExternalSupplierSetupResponse addExternalSupplier(String itemCode, ExternalSupplierSetupRequest request) {
+        log.info("Adding external supplier itemCode={} supplierCode={} contract={}", itemCode, request.supplierCode(), request.contractNumber());
         ensureItemExists(itemCode);
         ensureExternalSupplierType(request.supplierType());
         ensureItemAllowsExternal(itemCode);
@@ -112,6 +120,7 @@ public class ConsignmentSetupService {
     @Transactional
     public ExternalSupplierSetupResponse updateExternalSupplier(String itemCode, String supplierCode, String contractNumber,
                                                                  ExternalSupplierSetupRequest request) {
+        log.info("Updating external supplier itemCode={} supplierCode={} contract={}", itemCode, supplierCode, contractNumber);
         ensureItemExists(itemCode);
         ensureExternalSupplierType(request.supplierType());
         ensureItemAllowsExternal(itemCode);
@@ -140,6 +149,7 @@ public class ConsignmentSetupService {
 
     @Transactional
     public void deleteExternalSupplier(String itemCode, String supplierCode, String contractNumber) {
+        log.info("Deleting external supplier itemCode={} supplierCode={} contract={}", itemCode, supplierCode, contractNumber);
         List<ExternalSupplierEntity> existing = consignmentSetupMapper.findExternalByItemCodeAndSupplier(itemCode, supplierCode, contractNumber);
         if (existing.isEmpty()) throw new ResourceNotFoundException("External supplier setup not found: " + supplierCode);
         for (ExternalSupplierEntity e : existing) {
@@ -154,6 +164,7 @@ public class ConsignmentSetupService {
 
     @Transactional
     public InternalSupplierSetupResponse addInternalSupplier(String itemCode, InternalSupplierSetupRequest request) {
+        log.info("Adding internal supplier itemCode={} supplierCode={} supplierStore={}", itemCode, request.supplierCode(), request.supplierStore());
         ensureItemExists(itemCode);
         ensureInternalHierarchy(itemCode, request.supplierStore());
 
@@ -176,6 +187,7 @@ public class ConsignmentSetupService {
     @Transactional
     public InternalSupplierSetupResponse updateInternalSupplier(String itemCode, String supplierCode, String supplierStore,
                                                                   InternalSupplierSetupRequest request) {
+        log.info("Updating internal supplier itemCode={} supplierCode={} supplierStore={}", itemCode, supplierCode, supplierStore);
         ensureItemExists(itemCode);
         ensureInternalHierarchy(itemCode, request.supplierStore());
 
@@ -199,6 +211,7 @@ public class ConsignmentSetupService {
 
     @Transactional
     public void deleteInternalSupplier(String itemCode, String supplierCode, String supplierStore) {
+        log.info("Deleting internal supplier itemCode={} supplierCode={} supplierStore={}", itemCode, supplierCode, supplierStore);
         List<InternalSupplierEntity> existing = consignmentSetupMapper.findInternalByItemCodeAndSupplier(itemCode, supplierCode, supplierStore);
         if (existing.isEmpty()) throw new ResourceNotFoundException("Internal supplier setup not found: " + supplierCode);
         consignmentSetupMapper.deleteInternalBySupplier(itemCode, supplierCode, supplierStore);

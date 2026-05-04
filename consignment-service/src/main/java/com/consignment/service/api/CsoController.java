@@ -1,5 +1,6 @@
 package com.consignment.service.api;
 
+import com.consignment.service.config.ConsigneeContext;
 import com.consignment.service.model.ApiResponse;
 import com.consignment.service.model.cso.CsoRequest;
 import com.consignment.service.model.cso.CsoResponse;
@@ -24,10 +25,12 @@ public class CsoController {
 
     private final CsoService csoService;
     private final CsoSlipService csoSlipService;
+    private final ConsigneeContext consigneeContext;
 
-    public CsoController(CsoService csoService, CsoSlipService csoSlipService) {
+    public CsoController(CsoService csoService, CsoSlipService csoSlipService, ConsigneeContext consigneeContext) {
         this.csoService = csoService;
         this.csoSlipService = csoSlipService;
+        this.consigneeContext = consigneeContext;
     }
 
     @GetMapping("/api/cso")
@@ -73,7 +76,9 @@ public class CsoController {
     public ResponseEntity<ApiResponse<CsoResponse>> release(
             @PathVariable String id,
             @RequestHeader(value = "X-User", required = false) String releasedBy) {
-        return ResponseEntity.ok(ApiResponse.success(csoService.release(id, releasedBy)));
+        String authenticatedUser = consigneeContext.getCurrentUsername();
+        String effectiveReleasedBy = authenticatedUser != null ? authenticatedUser : releasedBy;
+        return ResponseEntity.ok(ApiResponse.success(csoService.release(id, effectiveReleasedBy)));
     }
 
     @DeleteMapping("/api/cso/{id}")

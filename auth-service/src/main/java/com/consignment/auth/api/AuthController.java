@@ -6,6 +6,7 @@ import com.consignment.auth.repository.TokenBlacklistRepository;
 import com.consignment.auth.repository.UserProfileRepository;
 import com.consignment.auth.repository.UserRepository;
 import com.consignment.auth.security.JwtUtil;
+import com.consignment.auth.security.LoginRateLimiter;
 import com.consignment.auth.service.MenuService;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.Valid;
@@ -20,11 +21,14 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalLong;
 import java.util.Set;
 
 @RestController
@@ -38,11 +42,13 @@ public class AuthController {
     private final JwtUtil jwtUtil;
     private final TokenBlacklistRepository blacklist;
     private final MenuService menuService;
+    private final LoginRateLimiter loginRateLimiter;
 
     public AuthController(AuthenticationManager authManager, UserRepository userRepository,
                           UserProfileRepository userProfileRepository,
                           PasswordEncoder passwordEncoder, JwtUtil jwtUtil,
-                          TokenBlacklistRepository blacklist, MenuService menuService) {
+                          TokenBlacklistRepository blacklist, MenuService menuService,
+                          LoginRateLimiter loginRateLimiter) {
         this.authManager = authManager;
         this.userRepository = userRepository;
         this.userProfileRepository = userProfileRepository;
@@ -50,10 +56,18 @@ public class AuthController {
         this.jwtUtil = jwtUtil;
         this.blacklist = blacklist;
         this.menuService = menuService;
+        this.loginRateLimiter = loginRateLimiter;
     }
 
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<?>> login(@Valid @RequestBody LoginRequest request) {
+        String rateLimitKey = request.username() + "|" + resolveClientIp();
+        OptionalLong blockedFor = loginRateLimiter.checkBlocked(rateLimitKey);
+        if (blockedFor.isPresent()) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .body(ApiResponse.error(429, "Too many failed login attempts. Try again in " + blockedFor.getAsLong() + " seconds"));
+        }
+
         try {
             Authentication auth = authManager.authenticate(
                     new UsernamePasswordAuthenticationToken(request.username(), request.password()));
@@ -82,11 +96,17 @@ public class AuthController {
                     "username", userDetails.getUsername(),
                     "roles", roles
             );
+                    loginRateLimiter.clearFailures(rateLimitKey);
             return ResponseEntity.ok(ApiResponse.ok("Login successful", data));
         } catch (DisabledException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "Account is disabled"));
         } catch (AuthenticationException e) {
+                    OptionalLong retryAfter = loginRateLimiter.registerFailure(rateLimitKey);
+                    if (retryAfter.isPresent()) {
+                    return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                        .body(ApiResponse.error(429, "Too many failed login attempts. Try again in " + retryAfter.getAsLong() + " seconds"));
+                    }
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(401, "Invalid username or password"));
         }
@@ -238,5 +258,22 @@ public class AuthController {
 
         List<String> menus = menuService.getMenusForRoles(roles);
         return ResponseEntity.ok(ApiResponse.ok("Menus retrieved successfully", menus));
+    }
+
+    private String resolveClientIp() {
+        ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+        if (attrs == null || attrs.getRequest() == null) {
+            return "unknown";
+        }
+
+        String forwarded = attrs.getRequest().getHeader("X-Forwarded-For");
+        if (forwarded != null && !forwarded.isBlank()) {
+            return forwarded.split(",")[0].trim();
+        }
+        String realIp = attrs.getRequest().getHeader("X-Real-IP");
+        if (realIp != null && !realIp.isBlank()) {
+            return realIp.trim();
+        }
+        return attrs.getRequest().getRemoteAddr();
     }
 }

@@ -55,4 +55,12 @@ public class ConsigneeContext {
                 .map(a -> a.getAuthority())
                 .collect(Collectors.toSet());
     }
+
+    public String getCurrentUsername() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || auth.getName() == null || auth.getName().isBlank()) {
+            return null;
+        }
+        return auth.getName();
+    }
 }

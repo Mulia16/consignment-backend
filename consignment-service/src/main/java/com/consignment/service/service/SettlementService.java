@@ -1,5 +1,6 @@
 package com.consignment.service.service;
 
+import com.consignment.service.constant.ConsignmentConstants;
 import com.consignment.service.exception.BusinessRuleViolationException;
 import com.consignment.service.exception.ResourceNotFoundException;
 import com.consignment.service.model.PageMeta;
@@ -28,6 +29,8 @@ import com.consignment.service.persistence.model.CsdoDetailEntity;
 import com.consignment.service.persistence.model.CsdoHeaderEntity;
 import com.consignment.service.persistence.model.SettlementDetailEntity;
 import com.consignment.service.persistence.model.SettlementRequestEntity;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -43,12 +46,14 @@ import java.util.concurrent.atomic.AtomicLong;
 @Service
 public class SettlementService {
 
-    private static final String STATUS_HELD = "HELD";
-    private static final String STATUS_READY_FOR_BILLING = "READY_FOR_BILLING";
-    private static final String STATUS_BILLED = "BILLED";
-    private static final String STATUS_SETTLED = "SETTLED";
-    private static final String STATUS_RELEASED = "RELEASED";
-    private static final String STATUS_COMPLETED = "COMPLETED";
+    private static final Logger log = LoggerFactory.getLogger(SettlementService.class);
+
+    private static final String STATUS_HELD = ConsignmentConstants.STATUS_HELD;
+    private static final String STATUS_READY_FOR_BILLING = ConsignmentConstants.STATUS_READY_FOR_BILLING;
+    private static final String STATUS_BILLED = ConsignmentConstants.STATUS_BILLED;
+    private static final String STATUS_SETTLED = ConsignmentConstants.STATUS_SETTLED;
+    private static final String STATUS_RELEASED = ConsignmentConstants.STATUS_RELEASED;
+    private static final String STATUS_COMPLETED = ConsignmentConstants.STATUS_COMPLETED;
     private static final String TYPE_CUSTOMER = "CUSTOMER";
     private static final String TYPE_SUPPLIER = "SUPPLIER";
     private static final String DOC_TYPE_CSO = "CSO";
@@ -86,6 +91,7 @@ public class SettlementService {
 
     @Transactional
     public SettlementResponse create(SettlementRequest request) {
+        log.info("Creating settlement type={} company={} store={}", request.settlementType(), request.company(), request.store());
         if (!TYPE_CUSTOMER.equalsIgnoreCase(request.settlementType()) && 
             !TYPE_SUPPLIER.equalsIgnoreCase(request.settlementType())) {
             throw new BusinessRuleViolationException("Settlement type must be CUSTOMER or SUPPLIER");
@@ -123,6 +129,8 @@ public class SettlementService {
 
     @Transactional
     public SettlementResponse generateBatch(SettlementBatchGenerateRequest request) {
+        log.info("Generating settlement batch type={} company={} store={} from={} to={}",
+            request.settlementType(), request.company(), request.store(), request.fromDate(), request.toDate());
         validatePeriod(request.fromDate(), request.toDate());
 
         SettlementResponse created = create(new SettlementRequest(
@@ -174,6 +182,7 @@ public class SettlementService {
 
     @Transactional
     public SettlementResponse postDetailsFromDocuments(String id, SettlementDocumentPostRequest request) {
+        log.info("Posting settlement details id={} documentCount={}", id, request.documents() == null ? 0 : request.documents().size());
         SettlementRequestEntity header = loadHeader(id);
         if (!STATUS_HELD.equalsIgnoreCase(header.getStatus())) {
             throw new BusinessRuleViolationException("Settlement details can only be posted when status is HELD");
@@ -189,6 +198,7 @@ public class SettlementService {
 
     @Transactional
     public SettlementResponse prepareForBilling(String id) {
+        log.info("Preparing settlement for billing id={}", id);
         SettlementRequestEntity header = loadHeader(id);
         if (!STATUS_HELD.equalsIgnoreCase(header.getStatus())) {
             throw new BusinessRuleViolationException("Only HELD settlement requests can be prepared for billing");
@@ -210,6 +220,7 @@ public class SettlementService {
 
     @Transactional
     public SettlementResponse markAsBilled(String id) {
+        log.info("Marking settlement as billed id={}", id);
         SettlementRequestEntity header = loadHeader(id);
         if (!STATUS_READY_FOR_BILLING.equalsIgnoreCase(header.getStatus())) {
             throw new BusinessRuleViolationException("Only READY_FOR_BILLING settlement requests can be marked as billed");
@@ -221,6 +232,7 @@ public class SettlementService {
 
     @Transactional
     public SettlementResponse markAsSettled(String id) {
+        log.info("Marking settlement as settled id={}", id);
         SettlementRequestEntity header = loadHeader(id);
         if (!STATUS_BILLED.equalsIgnoreCase(header.getStatus())) {
             throw new BusinessRuleViolationException("Only BILLED settlement requests can be marked as settled");
@@ -350,23 +362,21 @@ public class SettlementService {
         requireDocumentStatus(DOC_TYPE_CSO, header.getDocNo(), header.getStatus(), STATUS_RELEASED);
         validateCustomerAlignment(settlement, header.getCompany(), header.getStore(), header.getCustomerCode(), DOC_TYPE_CSO, header.getDocNo());
 
-        for (CsoDetailEntity detail : csoMapper.findDetailsByHeaderId(header.getId())) {
-            insertDetailIfAbsent(
-                    settlement.getId(),
-                    DOC_TYPE_CSO,
-                    header.getDocNo(),
-                    detail.getItemCode(),
-                    detail.getQty(),
-                    detail.getUom(),
-                    document.unitPrice(),
-                    document.remark(),
-                    header.getCompany(),
-                    header.getStore(),
-                    header.getSupplierCode(),
-                    header.getSupplierContract(),
-                    header.getCustomerCode()
-            );
-        }
+        postDetailsGeneric(
+            settlement,
+            document,
+            DOC_TYPE_CSO,
+            header.getDocNo(),
+            header.getCompany(),
+            header.getStore(),
+            header.getSupplierCode(),
+            header.getSupplierContract(),
+            header.getCustomerCode(),
+            csoMapper.findDetailsByHeaderId(header.getId()),
+            CsoDetailEntity::getItemCode,
+            CsoDetailEntity::getQty,
+            CsoDetailEntity::getUom
+        );
     }
 
     private void postCsdoDetails(SettlementRequestEntity settlement, SettlementDocumentSourceRequest document) {
@@ -378,23 +388,21 @@ public class SettlementService {
         requireDocumentStatus(DOC_TYPE_CSDO, header.getDocNo(), header.getStatus(), STATUS_RELEASED);
         validateCustomerAlignment(settlement, header.getCompany(), header.getStore(), header.getCustomerCode(), DOC_TYPE_CSDO, header.getDocNo());
 
-        for (CsdoDetailEntity detail : csdoMapper.findDetailsByHeaderId(header.getId())) {
-            insertDetailIfAbsent(
-                    settlement.getId(),
-                    DOC_TYPE_CSDO,
-                    header.getDocNo(),
-                    detail.getItemCode(),
-                    detail.getQty(),
-                    detail.getUom(),
-                    document.unitPrice(),
-                    document.remark(),
-                    header.getCompany(),
-                    header.getStore(),
-                    settlement.getSupplierCode(),
-                    settlement.getSupplierContract(),
-                    header.getCustomerCode()
-            );
-        }
+        postDetailsGeneric(
+            settlement,
+            document,
+            DOC_TYPE_CSDO,
+            header.getDocNo(),
+            header.getCompany(),
+            header.getStore(),
+            settlement.getSupplierCode(),
+            settlement.getSupplierContract(),
+            header.getCustomerCode(),
+            csdoMapper.findDetailsByHeaderId(header.getId()),
+            CsdoDetailEntity::getItemCode,
+            CsdoDetailEntity::getQty,
+            CsdoDetailEntity::getUom
+        );
     }
 
     private void postCsrvDetails(SettlementRequestEntity settlement, SettlementDocumentSourceRequest document) {
@@ -414,23 +422,21 @@ public class SettlementService {
                 header.getDocNo()
         );
 
-        for (CsrvDetailEntity detail : csrvMapper.findDetailsByHeaderId(header.getId())) {
-            insertDetailIfAbsent(
-                    settlement.getId(),
-                    DOC_TYPE_CSRV,
-                    header.getDocNo(),
-                    detail.getItemCode(),
-                    detail.getReceivingQty(),
-                    null,
-                    document.unitPrice(),
-                    document.remark(),
-                    header.getCompany(),
-                    header.getReceivingStore(),
-                    header.getSupplierCode(),
-                    header.getSupplierContract(),
-                    settlement.getCustomerCode()
+            postDetailsGeneric(
+                settlement,
+                document,
+                DOC_TYPE_CSRV,
+                header.getDocNo(),
+                header.getCompany(),
+                header.getReceivingStore(),
+                header.getSupplierCode(),
+                header.getSupplierContract(),
+                settlement.getCustomerCode(),
+                csrvMapper.findDetailsByHeaderId(header.getId()),
+                CsrvDetailEntity::getItemCode,
+                CsrvDetailEntity::getReceivingQty,
+                detail -> null
             );
-        }
     }
 
     private void postCsrnDetails(SettlementRequestEntity settlement, SettlementDocumentSourceRequest document) {
@@ -450,24 +456,24 @@ public class SettlementService {
                 header.getDocNo()
         );
 
-        for (CsrnDetailEntity detail : csrnMapper.findDetailsByHeaderId(header.getId())) {
-            BigDecimal actualQty = detail.getActualQty() == null ? detail.getQty() : detail.getActualQty();
-            insertDetailIfAbsent(
-                    settlement.getId(),
-                    DOC_TYPE_CSRN,
-                    header.getDocNo(),
-                    detail.getItemCode(),
-                    actualQty.negate(),
-                    detail.getUom(),
-                    document.unitPrice(),
-                    document.remark(),
-                    header.getCompany(),
-                    header.getStore(),
-                    header.getSupplierCode(),
-                    header.getSupplierContract(),
-                    settlement.getCustomerCode()
+            postDetailsGeneric(
+                settlement,
+                document,
+                DOC_TYPE_CSRN,
+                header.getDocNo(),
+                header.getCompany(),
+                header.getStore(),
+                header.getSupplierCode(),
+                header.getSupplierContract(),
+                settlement.getCustomerCode(),
+                csrnMapper.findDetailsByHeaderId(header.getId()),
+                CsrnDetailEntity::getItemCode,
+                detail -> {
+                    BigDecimal actualQty = detail.getActualQty() == null ? detail.getQty() : detail.getActualQty();
+                    return actualQty.negate();
+                },
+                CsrnDetailEntity::getUom
             );
-        }
     }
 
     private void postCsaDetails(SettlementRequestEntity settlement, SettlementDocumentSourceRequest document) {
@@ -487,27 +493,58 @@ public class SettlementService {
                 header.getDocNo()
         );
 
-        for (CsaDetailEntity detail : csaMapper.findDetailsByHeaderId(header.getId())) {
-            BigDecimal signedQty = "ADJ_OUT".equalsIgnoreCase(header.getTransactionType())
+            postDetailsGeneric(
+                settlement,
+                document,
+                DOC_TYPE_CSA,
+                header.getDocNo(),
+                header.getCompany(),
+                header.getStore(),
+                header.getSupplierCode(),
+                header.getSupplierContract(),
+                settlement.getCustomerCode(),
+                csaMapper.findDetailsByHeaderId(header.getId()),
+                CsaDetailEntity::getItemCode,
+                detail -> "ADJ_OUT".equalsIgnoreCase(header.getTransactionType())
                     ? detail.getQty().negate()
-                    : detail.getQty();
-            insertDetailIfAbsent(
+                    : detail.getQty(),
+                CsaDetailEntity::getUom
+            );
+    }
+
+            private <T> void postDetailsGeneric(
+                SettlementRequestEntity settlement,
+                SettlementDocumentSourceRequest document,
+                String documentType,
+                String documentNo,
+                String company,
+                String store,
+                String supplierCode,
+                String supplierContract,
+                String customerCode,
+                List<T> details,
+                java.util.function.Function<T, String> itemCodeExtractor,
+                java.util.function.Function<T, BigDecimal> qtyExtractor,
+                java.util.function.Function<T, String> uomExtractor
+            ) {
+            for (T detail : details) {
+                insertDetailIfAbsent(
                     settlement.getId(),
-                    DOC_TYPE_CSA,
-                    header.getDocNo(),
-                    detail.getItemCode(),
-                    signedQty,
-                    detail.getUom(),
+                    documentType,
+                    documentNo,
+                    itemCodeExtractor.apply(detail),
+                    qtyExtractor.apply(detail),
+                    uomExtractor.apply(detail),
                     document.unitPrice(),
                     document.remark(),
-                    header.getCompany(),
-                    header.getStore(),
-                    header.getSupplierCode(),
-                    header.getSupplierContract(),
-                    settlement.getCustomerCode()
-            );
-        }
-    }
+                    company,
+                    store,
+                    supplierCode,
+                    supplierContract,
+                    customerCode
+                );
+            }
+            }
 
     private void insertDetailIfAbsent(
             String settlementId,

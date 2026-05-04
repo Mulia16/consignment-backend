@@ -12,7 +12,7 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
-            @Value("${app.security.enabled:false}") boolean securityEnabled,
+            @Value("${app.security.enabled:true}") boolean securityEnabled,
             JwtAuthFilter jwtAuthFilter) throws Exception {
         http.csrf(csrf -> csrf.disable());
 
@@ -23,7 +23,8 @@ public class SecurityConfig {
 
         http.authorizeHttpRequests(auth -> auth
                 .requestMatchers("/actuator/health", "/actuator/info").permitAll()
-                .requestMatchers("/api/consignee/**").hasAuthority("ROLE_CONSIGNEE")
+                .requestMatchers("/api/consignee/**").hasAnyAuthority("ROLE_CONSIGNEE", "ROLE_ADMIN")
+            .requestMatchers("/api/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_CONSIGNEE")
                 .anyRequest().authenticated()
         );
         http.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

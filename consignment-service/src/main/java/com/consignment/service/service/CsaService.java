@@ -1,5 +1,6 @@
 package com.consignment.service.service;
 
+import com.consignment.service.constant.ConsignmentConstants;
 import com.consignment.service.exception.BusinessRuleViolationException;
 import com.consignment.service.exception.ResourceNotFoundException;
 import com.consignment.service.model.PageMeta;
@@ -23,8 +24,8 @@ import java.util.UUID;
 @Service
 public class CsaService {
 
-    private static final String STATUS_HELD = "HELD";
-    private static final String STATUS_RELEASED = "RELEASED";
+    private static final String STATUS_HELD = ConsignmentConstants.STATUS_HELD;
+    private static final String STATUS_RELEASED = ConsignmentConstants.STATUS_RELEASED;
     private static final String TRANS_TYPE_ADJ_IN = "ADJ_IN";
     private static final String TRANS_TYPE_ADJ_OUT = "ADJ_OUT";
     private static final String DECISION_UNPOST_RETURN = "UNPOST_RETURN";

@@ -1,5 +1,6 @@
 package com.consignment.service.service;
 
+import com.consignment.service.constant.ConsignmentConstants;
 import com.consignment.service.exception.BusinessRuleViolationException;
 import com.consignment.service.exception.ResourceNotFoundException;
 import com.consignment.service.model.PageMeta;
@@ -22,7 +23,7 @@ import java.util.UUID;
 @Service
 public class CsrqService {
 
-    private static final String STATUS_HELD = "HELD";
+    private static final String STATUS_HELD = ConsignmentConstants.STATUS_HELD;
     private static final String STATUS_RELEASED = "RELEASED";
 
     private final CsrqMapper csrqMapper;

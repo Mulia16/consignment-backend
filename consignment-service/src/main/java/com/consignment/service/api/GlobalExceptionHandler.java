@@ -23,12 +23,15 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+    private static final Pattern JSON_FIELD_PATTERN = Pattern.compile("through reference chain: .*?\\[\\\"([^\\\"]+)\\\"\\]");
 
     // 403 - JWT tidak memiliki claim store
     @ExceptionHandler(MissingStoreClaimException.class)
@@ -49,9 +52,20 @@ public class GlobalExceptionHandler {
     // 400 - format/parsing error (JSON tidak valid, tipe data salah)
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ApiResponse<Void>> handleNotReadable(HttpMessageNotReadableException ex, HttpServletRequest request) {
-        log.warn("[400] MessageNotReadable: {}", ex.getMessage());
+        String detail = ex.getMostSpecificCause() != null ? ex.getMostSpecificCause().getMessage() : ex.getMessage();
+        String field = extractJsonField(detail);
+        log.warn("[400] MessageNotReadable: {}", detail);
+        if (field != null) {
+            List<Map<String, String>> errors = List.of(Map.of(
+                "field", field,
+                "message", "Invalid value or type for field",
+                "value", detail == null ? "unknown" : detail
+            ));
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ApiResponse<>("Invalid request format", 400, errors, null, null));
+        }
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.error(400, "Invalid request format: " + ex.getMostSpecificCause().getMessage()));
+            .body(ApiResponse.error(400, "Invalid request format: " + detail));
     }
 
     // 422 - field validation gagal (@NotBlank, @NotNull, dll)
@@ -133,7 +147,7 @@ public class GlobalExceptionHandler {
                     .body(new ApiResponse<>("Duplicate document number", 409, duplicateDocNoErrors, null, null));
             }
         List<Map<String, String>> errors = List.of(Map.of(
-            "field", "payload",
+            "field", extractConstraintField(detail),
             "message", "Request violates database constraint: " + detail
         ));
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
@@ -161,5 +175,39 @@ public class GlobalExceptionHandler {
                 "field", field,
                 "message", violation.getMessage()
         );
+    }
+
+    private String extractJsonField(String detail) {
+        if (detail == null) {
+            return null;
+        }
+        Matcher matcher = JSON_FIELD_PATTERN.matcher(detail);
+        if (matcher.find()) {
+            return matcher.group(1);
+        }
+        return null;
+    }
+
+    private String extractConstraintField(String detail) {
+        if (detail == null || detail.isBlank()) {
+            return "payload";
+        }
+        String lower = detail.toLowerCase();
+        if (lower.contains("document_type")) {
+            return "documentType";
+        }
+        if (lower.contains("document_no")) {
+            return "documentNo";
+        }
+        if (lower.contains("supplier_code")) {
+            return "supplierCode";
+        }
+        if (lower.contains("supplier_contract")) {
+            return "supplierContract";
+        }
+        if (lower.contains("item_code")) {
+            return "itemCode";
+        }
+        return "payload";
     }
 }

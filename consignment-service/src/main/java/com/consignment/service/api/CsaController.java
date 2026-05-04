@@ -1,5 +1,6 @@
 package com.consignment.service.api;
 
+import com.consignment.service.config.ConsigneeContext;
 import com.consignment.service.model.ApiResponse;
 import com.consignment.service.model.csa.CsaRequest;
 import com.consignment.service.model.csa.CsaResponse;
@@ -21,10 +22,12 @@ public class CsaController {
 
     private final CsaService csaService;
     private final CsaSlipService csaSlipService;
+    private final ConsigneeContext consigneeContext;
 
-    public CsaController(CsaService csaService, CsaSlipService csaSlipService) {
+    public CsaController(CsaService csaService, CsaSlipService csaSlipService, ConsigneeContext consigneeContext) {
         this.csaService = csaService;
         this.csaSlipService = csaSlipService;
+        this.consigneeContext = consigneeContext;
     }
 
     @GetMapping
@@ -60,7 +63,9 @@ public class CsaController {
     public ResponseEntity<ApiResponse<CsaResponse>> release(
             @PathVariable String id,
             @RequestHeader(value = "X-User", required = false) String releasedBy) {
-        return ResponseEntity.ok(ApiResponse.success(csaService.release(id, releasedBy)));
+        String authenticatedUser = consigneeContext.getCurrentUsername();
+        String effectiveReleasedBy = authenticatedUser != null ? authenticatedUser : releasedBy;
+        return ResponseEntity.ok(ApiResponse.success(csaService.release(id, effectiveReleasedBy)));
     }
 
     @GetMapping("/{id}/slip")

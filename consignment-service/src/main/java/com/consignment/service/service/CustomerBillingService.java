@@ -1,5 +1,6 @@
 package com.consignment.service.service;
 
+import com.consignment.service.constant.ConsignmentConstants;
 import com.consignment.service.exception.BusinessRuleViolationException;
 import com.consignment.service.exception.ResourceNotFoundException;
 import com.consignment.service.model.PageMeta;
@@ -21,8 +22,8 @@ import java.util.UUID;
 @Service
 public class CustomerBillingService {
 
-    private static final String STATUS_HELD     = "HELD";
-    private static final String STATUS_RELEASED = "RELEASED";
+    private static final String STATUS_HELD     = ConsignmentConstants.STATUS_HELD;
+    private static final String STATUS_RELEASED = ConsignmentConstants.STATUS_RELEASED;
     private static final String PROCESS_COMPLETED = "COMPLETED";
     private static final String PROCESS_FAILED   = "FAILED";
 

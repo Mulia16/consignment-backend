@@ -26,7 +26,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     private final boolean securityEnabled;
 
     public JwtAuthFilter(JwtUtil jwtUtil,
-                         @Value("${app.security.enabled:false}") boolean securityEnabled) {
+                         @Value("${app.security.enabled:true}") boolean securityEnabled) {
         this.jwtUtil = jwtUtil;
         this.securityEnabled = securityEnabled;
     }
