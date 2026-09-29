@@ -5,6 +5,7 @@ import com.consignment.auth.repository.TokenBlacklistRepository;
 import com.consignment.auth.repository.UserProfileRepository;
 import com.consignment.auth.repository.UserRepository;
 import com.consignment.auth.security.JwtUtil;
+import com.consignment.auth.security.LoginRateLimiter;
 import net.jqwik.api.*;
 import net.jqwik.api.constraints.AlphaChars;
 import net.jqwik.api.constraints.StringLength;
@@ -80,7 +81,8 @@ class MissingUserProfileBlocksLoginPropertyTest {
         AuthController controller = new AuthController(
                 authManager, userRepository, userProfileRepository,
                 mock(org.springframework.security.crypto.password.PasswordEncoder.class),
-                jwtUtil, blacklist, mock(com.consignment.auth.service.MenuService.class)
+                jwtUtil, blacklist, mock(com.consignment.auth.service.MenuService.class),
+                new LoginRateLimiter(5, 300, 900)
         );
 
         // Build login request via reflection (LoginRequest is a private record)

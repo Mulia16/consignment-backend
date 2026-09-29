@@ -4,6 +4,7 @@ import com.consignment.auth.repository.TokenBlacklistRepository;
 import com.consignment.auth.repository.UserProfileRepository;
 import com.consignment.auth.repository.UserRepository;
 import com.consignment.auth.security.JwtUtil;
+import com.consignment.auth.security.LoginRateLimiter;
 import com.consignment.auth.service.MenuService;
 import net.jqwik.api.ForAll;
 import net.jqwik.api.Property;
@@ -46,7 +47,8 @@ class AdminMenuListPropertyTest {
         MenuService menuService = new MenuService();
         AuthController controller = new AuthController(
                 authManager, userRepository, userProfileRepository,
-                passwordEncoder, jwtUtil, blacklist, menuService
+                passwordEncoder, jwtUtil, blacklist, menuService,
+                new LoginRateLimiter(5, 300, 900)
         );
 
         @SuppressWarnings("unchecked")

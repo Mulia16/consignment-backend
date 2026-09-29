@@ -4,6 +4,7 @@ import com.consignment.auth.repository.TokenBlacklistRepository;
 import com.consignment.auth.repository.UserProfileRepository;
 import com.consignment.auth.repository.UserRepository;
 import com.consignment.auth.security.JwtUtil;
+import com.consignment.auth.security.LoginRateLimiter;
 import com.consignment.auth.service.MenuService;
 import net.jqwik.api.*;
 import net.jqwik.api.constraints.AlphaChars;
@@ -67,7 +68,8 @@ class ConsigneeMenuListPropertyTest {
         // Instantiate AuthController with real MenuService
         AuthController controller = new AuthController(
                 authManager, userRepository, userProfileRepository,
-                passwordEncoder, jwtUtil, blacklist, menuService
+                passwordEncoder, jwtUtil, blacklist, menuService,
+                new LoginRateLimiter(5, 300, 900)
         );
 
         // --- Invoke getMenus ---
