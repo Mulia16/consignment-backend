@@ -27,6 +27,9 @@ services:
       context: .
       dockerfile: api-gateway/Dockerfile
     restart: unless-stopped
+    # Dipakai Coolify untuk menentukan port target proxy (domain -> container:8080).
+    expose:
+      - "8080"
     depends_on:
       service-registry:
         condition: service_healthy
